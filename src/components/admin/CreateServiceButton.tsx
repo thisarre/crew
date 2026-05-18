@@ -26,6 +26,7 @@ type FormData = z.infer<typeof schema>;
 
 export default function CreateServiceButton() {
   const [open, setOpen] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
   const router = useRouter();
 
   const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
@@ -33,16 +34,21 @@ export default function CreateServiceButton() {
   });
 
   async function onSubmit(data: FormData) {
+    setServerError(null);
     const supabase = createClient();
-    const { data: profile } = await supabase.from("profiles").select("organization_id").single();
-    await supabase.from("services").insert({
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data: profile } = await supabase.from("profiles").select("organization_id").eq("id", user.id).single();
+    const { error } = await supabase.from("services").insert({
       ...data,
       organization_id: profile?.organization_id,
+      created_by: user.id,
       arrival_time: data.arrival_time || null,
       location: data.location || null,
       spiritual_theme: data.spiritual_theme || null,
       notes: data.notes || null,
     });
+    if (error) { setServerError(error.message); return; }
     reset();
     setOpen(false);
     router.refresh();
@@ -92,6 +98,9 @@ export default function CreateServiceButton() {
               <Label>Thème spirituel (optionnel)</Label>
               <Input placeholder="L'unité" className="rounded-xl" {...register("spiritual_theme")} />
             </div>
+            {serverError && (
+              <p className="text-red-500 text-xs text-center">{serverError}</p>
+            )}
             <Button
               type="submit"
               disabled={isSubmitting}
