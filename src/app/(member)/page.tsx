@@ -1,12 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
-import { getGreeting, getServiceCountMessage, formatServiceDate } from "@/lib/tone";
-import { format } from "date-fns";
+import { getGreeting } from "@/lib/tone";
+import { format, parseISO } from "date-fns";
 import { fr } from "date-fns/locale";
 import { redirect } from "next/navigation";
 import ConfirmationButtons from "@/components/member/ConfirmationButtons";
-import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Calendar, Heart, BarChart2, BookOpen } from "lucide-react";
+import { Heart, BookOpen } from "lucide-react";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -24,7 +22,6 @@ export default async function DashboardPage() {
   const name = profile.preferred_name || profile.full_name.split(" ")[0];
   const today = format(new Date(), "yyyy-MM-dd");
 
-  // Prochain service avec assignation de ce membre
   const { data: nextAssignment } = await supabase
     .from("assignments")
     .select(`
@@ -39,7 +36,6 @@ export default async function DashboardPage() {
     .limit(1)
     .maybeSingle();
 
-  // Co-équipiers du même service
   let teammates: { profiles: { preferred_name: string | null; full_name: string } | null; skills: { name: string; icon: string | null } | null }[] = [];
   if (nextAssignment?.services) {
     const svc = nextAssignment.services as { id: string };
@@ -52,7 +48,6 @@ export default async function DashboardPage() {
     teammates = data ?? [];
   }
 
-  // Pensée de la semaine
   const { data: spiritualContent } = await supabase
     .from("spiritual_content")
     .select("title, content, reference, type")
@@ -62,7 +57,6 @@ export default async function DashboardPage() {
     .limit(1)
     .maybeSingle();
 
-  // Appréciations reçues cette semaine
   const oneWeekAgo = new Date();
   oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
   const { data: recentAppreciations } = await supabase
@@ -73,7 +67,6 @@ export default async function DashboardPage() {
     .order("created_at", { ascending: false })
     .limit(3);
 
-  // Stats du mois
   const { data: stats } = await supabase
     .from("member_stats")
     .select("services_this_month, services_this_year")
@@ -89,124 +82,137 @@ export default async function DashboardPage() {
   const skill = nextAssignment?.skills as { name: string; icon: string | null } | null;
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-6 space-y-5">
-      {/* Salutation */}
-      <div>
-        <h1 className="font-display text-2xl font-bold text-slate-900">
+    <div className="max-w-lg mx-auto space-y-5">
+
+      {/* Header */}
+      <div className="px-4 pt-8 pb-2">
+        <h1 className="font-display text-3xl font-bold text-slate-900 leading-tight">
           {getGreeting(name)}
         </h1>
+        <p className="text-slate-500 text-sm mt-1.5">
+          {stats?.services_this_month
+            ? `${stats.services_this_month} service${stats.services_this_month > 1 ? "s" : ""} ce mois`
+            : "Prêt à servir 🙌"}
+        </p>
       </div>
 
-      {/* Pensée de la semaine */}
+      {/* Pensée spirituelle */}
       {spiritualContent && (
-        <Card className="rounded-2xl border-spirit-500/20 bg-spirit-50">
-          <CardContent className="p-4 space-y-1">
-            <div className="flex items-center gap-2 text-spirit-600 text-xs font-medium mb-2">
-              <BookOpen className="w-3.5 h-3.5" />
-              {spiritualContent.type === "verse" ? "Verset de la semaine" : "Pensée de la semaine"}
-            </div>
-            <p className="text-slate-800 text-sm leading-relaxed italic">
-              &ldquo;{spiritualContent.content}&rdquo;
-            </p>
-            {spiritualContent.reference && (
-              <p className="text-spirit-600 text-xs font-medium">— {spiritualContent.reference}</p>
-            )}
-          </CardContent>
-        </Card>
+        <div className="mx-4 rounded-2xl bg-spirit-50 border border-spirit-100 p-4 space-y-2">
+          <div className="flex items-center gap-1.5 text-spirit-600 text-xs font-semibold uppercase tracking-wider">
+            <BookOpen className="w-3.5 h-3.5" />
+            {spiritualContent.type === "verse" ? "Verset de la semaine" : "Pensée de la semaine"}
+          </div>
+          <p className="text-slate-700 text-sm leading-relaxed italic">
+            &ldquo;{spiritualContent.content}&rdquo;
+          </p>
+          {spiritualContent.reference && (
+            <p className="text-spirit-600 text-xs font-semibold">— {spiritualContent.reference}</p>
+          )}
+        </div>
       )}
 
       {/* Prochain service */}
-      <div>
-        <div className="flex items-center gap-2 text-slate-500 text-sm font-medium mb-3">
-          <Calendar className="w-4 h-4" />
+      <div className="px-4">
+        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3">
           Prochain service
-        </div>
+        </p>
+
         {service ? (
-          <Card className="rounded-2xl">
-            <CardContent className="p-5 space-y-4">
-              <div className="space-y-1">
-                <p className="font-semibold text-slate-900 capitalize">
-                  {formatServiceDate(new Date(`${service.service_date}T${service.start_time}`))}
-                </p>
-                {service.arrival_time && (
-                  <p className="text-slate-500 text-sm">
-                    Arrivée à {service.arrival_time.slice(0, 5).replace(":", "h")}
+          <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+            <div className="p-4 flex gap-4">
+              {/* Date tile */}
+              <div className="flex-shrink-0 w-[58px] rounded-2xl bg-warmth-500 flex flex-col items-center justify-center py-3 gap-0.5">
+                <span className="text-white/70 text-[11px] font-bold uppercase tracking-widest leading-none">
+                  {format(parseISO(service.service_date), "EEE", { locale: fr })}
+                </span>
+                <span className="text-white text-[32px] font-bold leading-tight">
+                  {format(parseISO(service.service_date), "d")}
+                </span>
+                <span className="text-white/70 text-[11px] font-semibold uppercase leading-none">
+                  {format(parseISO(service.service_date), "MMM", { locale: fr })}
+                </span>
+              </div>
+
+              {/* Infos */}
+              <div className="flex-1 min-w-0 space-y-2 py-0.5">
+                <div>
+                  <p className="text-slate-900 font-bold text-xl leading-none">
+                    {service.start_time?.slice(0, 5).replace(":", "h")}
                   </p>
-                )}
+                  {service.arrival_time && (
+                    <p className="text-slate-400 text-sm mt-0.5">
+                      Arrivée {service.arrival_time.slice(0, 5).replace(":", "h")}
+                    </p>
+                  )}
+                </div>
+
                 {service.location && (
                   <p className="text-slate-500 text-sm">📍 {service.location}</p>
                 )}
-              </div>
 
-              {skill && (
-                <div className="flex items-center gap-2">
-                  <Badge variant="secondary" className="rounded-full text-xs">
-                    {skill.icon} {skill.name}
-                  </Badge>
-                  {teammates.length > 0 && (
-                    <span className="text-slate-500 text-xs">
-                      avec {teammates.map(t => {
-                        const p = t.profiles;
-                        return p ? (p.preferred_name || p.full_name.split(" ")[0]) : "";
-                      }).filter(Boolean).join(", ")}
+                {skill && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="inline-flex items-center gap-1 bg-warmth-50 text-warmth-700 text-xs font-semibold px-2.5 py-1 rounded-full">
+                      {skill.icon} {skill.name}
                     </span>
-                  )}
-                </div>
-              )}
+                    {teammates.length > 0 && (
+                      <span className="text-slate-400 text-xs">
+                        avec{" "}
+                        {teammates
+                          .map((t) => {
+                            const p = t.profiles;
+                            return p ? p.preferred_name || p.full_name.split(" ")[0] : "";
+                          })
+                          .filter(Boolean)
+                          .join(", ")}
+                      </span>
+                    )}
+                  </div>
+                )}
 
-              {service.spiritual_theme && (
-                <p className="text-slate-500 text-sm">
-                  🙏 Thème : <span className="text-slate-700 font-medium">{service.spiritual_theme}</span>
-                </p>
-              )}
+                {service.spiritual_theme && (
+                  <p className="text-slate-400 text-xs">🙏 {service.spiritual_theme}</p>
+                )}
+              </div>
+            </div>
 
+            <div className="px-4 pb-4">
               <ConfirmationButtons
                 assignmentId={nextAssignment!.id}
                 currentStatus={nextAssignment!.status ?? "pending"}
               />
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         ) : (
-          <Card className="rounded-2xl">
-            <CardContent className="p-5 text-center text-slate-400 text-sm">
-              Pas de service prévu — repose-toi bien 😌
-            </CardContent>
-          </Card>
+          <div className="bg-white rounded-3xl border border-slate-100 p-8 text-center">
+            <p className="text-2xl mb-2">😌</p>
+            <p className="text-slate-600 font-medium text-sm">Pas de service prévu</p>
+            <p className="text-slate-400 text-xs mt-1">Profite du repos bien mérité</p>
+          </div>
         )}
       </div>
 
-      {/* Appréciations reçues */}
+      {/* Appréciations */}
       {recentAppreciations && recentAppreciations.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 text-slate-500 text-sm font-medium mb-3">
-            <Heart className="w-4 h-4" />
-            Reçu cette semaine
-          </div>
+        <div className="px-4">
+          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+            <Heart className="w-3 h-3" /> Reçu cette semaine
+          </p>
           <div className="space-y-2">
             {recentAppreciations.map((a, i) => {
               const from = a.profiles as { preferred_name: string | null; full_name: string } | null;
               const fromName = from ? (from.preferred_name || from.full_name.split(" ")[0]) : "Quelqu'un";
               return (
-                <Card key={i} className="rounded-2xl">
-                  <CardContent className="p-4">
-                    <p className="text-slate-700 text-sm">&ldquo;{a.message}&rdquo;</p>
-                    <p className="text-slate-400 text-xs mt-1">— {fromName}</p>
-                  </CardContent>
-                </Card>
+                <div key={i} className="bg-white rounded-2xl border border-slate-100 p-4">
+                  <p className="text-slate-700 text-sm leading-relaxed">&ldquo;{a.message}&rdquo;</p>
+                  <p className="text-slate-400 text-xs mt-1.5 font-medium">— {fromName}</p>
+                </div>
               );
             })}
           </div>
         </div>
       )}
-
-      {/* Stats du mois */}
-      <div className="flex items-center gap-2 pt-2 pb-4">
-        <BarChart2 className="w-4 h-4 text-slate-400" />
-        <p className="text-slate-400 text-xs">
-          Ce mois : <span className="text-slate-600 font-medium">{stats?.services_this_month ?? 0} service{(stats?.services_this_month ?? 0) > 1 ? "s" : ""}</span>
-          {stats?.services_this_month ? ` · ${getServiceCountMessage(stats.services_this_month).replace(/^\d+e service ce mois, /, "")}` : ""}
-        </p>
-      </div>
     </div>
   );
 }

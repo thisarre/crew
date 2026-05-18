@@ -49,11 +49,19 @@
 
   /* Palette Crew : chaleur (ambre) + spirituel (émeraude) */
   --color-warmth-50: #FFFBEB;
+  --color-warmth-100: #FEF3C7;
+  --color-warmth-200: #FDE68A;
+  --color-warmth-400: #FBBF24;
   --color-warmth-500: #F59E0B;
   --color-warmth-600: #D97706;
+  --color-warmth-700: #B45309;
   --color-spirit-50: #ECFDF5;
+  --color-spirit-100: #D1FAE5;
+  --color-spirit-200: #A7F3D0;
+  --color-spirit-400: #34D399;
   --color-spirit-500: #10B981;
   --color-spirit-600: #059669;
+  --color-spirit-700: #047857;
 }
 
 :root {
