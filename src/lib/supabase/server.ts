@@ -1,28 +1,41 @@
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
-import type { Database } from "@/types/database";
+import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js';
 
-export async function createClient() {
-  const cookieStore = await cookies();
+import type { Database } from '@/types/database';
+import { createMockSupabaseClient } from './mock';
 
-  return createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
-          } catch {
-            // Appelé depuis un Server Component — les cookies sont read-only
-          }
-        },
-      },
-    }
-  );
-}
+const getSupabaseUrl = () => {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!url) {
+    throw new Error('NEXT_PUBLIC_SUPABASE_URL manquant');
+  }
+  return url;
+};
+
+const getServiceRoleKey = () => process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+const getAnonKey = () => {
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!key) {
+    throw new Error('NEXT_PUBLIC_SUPABASE_ANON_KEY manquant');
+  }
+  return key;
+};
+
+const shouldUseMock = () => process.env.SUPABASE_MOCK === 'true' || process.env.NODE_ENV === 'test';
+
+export type SupabaseServerClient = SupabaseClient<Database>;
+
+export const createClient = (): SupabaseServerClient => {
+  if (shouldUseMock()) {
+    return createMockSupabaseClient() as unknown as SupabaseServerClient;
+  }
+
+  const url = getSupabaseUrl();
+  const key = getServiceRoleKey() ?? getAnonKey();
+
+  return createSupabaseClient<Database>(url, key, {
+    auth: {
+      persistSession: false,
+    },
+  });
+};

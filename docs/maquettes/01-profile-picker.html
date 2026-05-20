@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Crew — 01 Profile Picker</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.0.0/tabler-icons.min.css">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, 'Segoe UI', Inter, sans-serif; background: #F4F4F2; min-height: 100vh; padding: 24px 20px 32px; max-width: 430px; margin: 0 auto; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+.s1 { animation: fadeUp 0.5s 0.05s both cubic-bezier(0.16, 1, 0.3, 1); }
+.s2 { animation: fadeUp 0.5s 0.12s both cubic-bezier(0.16, 1, 0.3, 1); }
+.s3 { animation: fadeUp 0.5s 0.20s both cubic-bezier(0.16, 1, 0.3, 1); }
+.s4 { animation: fadeUp 0.5s 0.28s both cubic-bezier(0.16, 1, 0.3, 1); }
+.s5 { animation: fadeUp 0.5s 0.36s both cubic-bezier(0.16, 1, 0.3, 1); }
+.s6 { animation: fadeUp 0.5s 0.44s both cubic-bezier(0.16, 1, 0.3, 1); }
+.s7 { animation: fadeUp 0.5s 0.52s both cubic-bezier(0.16, 1, 0.3, 1); }
+.av { cursor: pointer; transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1); }
+.av:hover { transform: translateY(-3px); }
+.av:active { transform: scale(0.95); }
+</style>
+</head>
+<body>
+
+<div class="s1" style="text-align: center; margin-bottom: 32px; padding-top: 16px;">
+  <p style="font-size: 12px; font-weight: 700; color: #6B6B6F; margin: 0 0 8px; letter-spacing: 1.2px; text-transform: uppercase;">Crew Production</p>
+  <p style="font-size: 28px; font-weight: 700; color: #16161B; margin: 0; line-height: 1.15; letter-spacing: -0.5px;">Qui es-tu ?</p>
+  <p style="font-size: 14px; color: #6B6B6F; margin: 8px 0 0;">Tap sur ton profil pour entrer</p>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 32px;">
+  <div class="av s2">
+    <div style="aspect-ratio: 1; background: #96D8D0; border-radius: 22px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px;">
+      <span style="font-size: 32px; font-weight: 700; color: #16161B;">C</span>
+    </div>
+    <p style="font-size: 13px; font-weight: 600; color: #16161B; margin: 0; text-align: center;">Chana</p>
+  </div>
+  <div class="av s3">
+    <div style="aspect-ratio: 1; background: #D2B4F1; border-radius: 22px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px;">
+      <span style="font-size: 32px; font-weight: 700; color: #16161B;">I</span>
+    </div>
+    <p style="font-size: 13px; font-weight: 600; color: #16161B; margin: 0; text-align: center;">Isaac</p>
+  </div>
+  <div class="av s4">
+    <div style="aspect-ratio: 1; background: #DAF4AA; border-radius: 22px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px;">
+      <span style="font-size: 32px; font-weight: 700; color: #16161B;">Cs</span>
+    </div>
+    <p style="font-size: 13px; font-weight: 600; color: #16161B; margin: 0; text-align: center;">Chrisciana</p>
+  </div>
+  <div class="av s5">
+    <div style="aspect-ratio: 1; background: #D2B4F1; border-radius: 22px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px;">
+      <span style="font-size: 32px; font-weight: 700; color: #16161B;">D</span>
+    </div>
+    <p style="font-size: 13px; font-weight: 600; color: #16161B; margin: 0; text-align: center;">Dave</p>
+  </div>
+  <div class="av s6">
+    <div style="aspect-ratio: 1; background: #96D8D0; border-radius: 22px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px;">
+      <span style="font-size: 32px; font-weight: 700; color: #16161B;">S</span>
+    </div>
+    <p style="font-size: 13px; font-weight: 600; color: #16161B; margin: 0; text-align: center;">Stéphanie</p>
+  </div>
+  <div class="av s7">
+    <div style="aspect-ratio: 1; background: #DAF4AA; border-radius: 22px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px;">
+      <span style="font-size: 32px; font-weight: 700; color: #16161B;">G</span>
+    </div>
+    <p style="font-size: 13px; font-weight: 600; color: #16161B; margin: 0; text-align: center;">Gloria</p>
+  </div>
+</div>
+
+<div class="av s7" style="background: #16161B; border-radius: 18px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between;">
+  <div style="display: flex; align-items: center; gap: 12px;">
+    <div style="width: 32px; height: 32px; border-radius: 50%; background: #DAF4AA; display: flex; align-items: center; justify-content: center;">
+      <i class="ti ti-key" style="font-size: 16px; color: #16161B;"></i>
+    </div>
+    <div>
+      <p style="font-size: 13px; font-weight: 600; color: #FFFFFF; margin: 0;">Je suis le responsable</p>
+      <p style="font-size: 11px; color: rgba(255,255,255,0.55); margin: 2px 0 0;">Accès console admin</p>
+    </div>
+  </div>
+  <i class="ti ti-arrow-right" style="font-size: 18px; color: #FFFFFF;"></i>
+</div>
+
+<p style="font-size: 11px; color: #9C9CA0; text-align: center; margin: 24px 0 0; line-height: 1.5;">Cet espace est partagé entre les membres de l'équipe production</p>
+
+</body>
+</html>

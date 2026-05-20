@@ -1,0 +1,6 @@
+project_id = "crew-local"
+api_url = "https://api.supabase.com"
+db_url = "postgresql://postgres:postgres@127.0.0.1:54322/postgres"
+studio_url = "http://127.0.0.1:54323"
+service_api_url = "http://127.0.0.1:54321"
+functions_url = "http://127.0.0.1:54321/functions/v1"

@@ -1,35 +1,16 @@
-import type { Metadata, Viewport } from "next";
-import { Inter, Fraunces } from "next/font/google";
+import type { Metadata } from "next";
+import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({
-  variable: "--font-inter",
+const primaryFont = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  display: "swap",
-});
-
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
-  subsets: ["latin"],
-  display: "swap",
+  variable: "--font-primary",
+  weight: ["400", "500", "600", "700"],
 });
 
 export const metadata: Metadata = {
-  title: "Crew — Équipe de production",
-  description: "Plateforme de gestion d'équipe pour les services d'église",
-  manifest: "/manifest.json",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "Crew",
-  },
-};
-
-export const viewport: Viewport = {
-  themeColor: "#F59E0B",
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 1,
+  title: "Crew — Gestion d'équipe",
+  description: "PWA Connectify pour coordonner l'équipe média d'Alpha.",
 };
 
 export default function RootLayout({
@@ -38,11 +19,10 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="fr"
-      className={`${inter.variable} ${fraunces.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col">{children}</body>
+    <html lang="fr" className={`${primaryFont.variable} antialiased`}>
+      <body className="min-h-screen bg-[var(--color-bg)] text-[var(--color-ink)]">
+        {children}
+      </body>
     </html>
   );
 }

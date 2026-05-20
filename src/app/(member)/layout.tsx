@@ -1,29 +1,14 @@
-import { createClient } from "@/lib/supabase/server";
-import { redirect } from "next/navigation";
-import MemberNav from "@/components/member/MemberNav";
+import type { ReactNode } from 'react';
 
-export default async function MemberLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
+import { BottomNav } from '@/components/member/bottom-nav';
+import { getMockNextEventDate } from '@/data/member-dashboard';
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("id, preferred_name, full_name, role, avatar_url")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile) redirect("/onboarding");
-
-  // Redirige les admins/leaders vers l'espace admin
-  if (profile.role === "admin" || profile.role === "leader") {
-    redirect("/admin/services");
-  }
-
+export default function MemberLayout({ children }: { children: ReactNode }) {
+  const nextEventDate = getMockNextEventDate();
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50">
-      <main className="flex-1 pb-24">{children}</main>
-      <MemberNav />
+    <div className="mx-auto flex min-h-screen w-full max-w-[430px] flex-col px-5 pt-6 pb-[120px]">
+      <main className="flex-1 pb-6">{children}</main>
+      <BottomNav nextEventDate={nextEventDate} />
     </div>
   );
 }

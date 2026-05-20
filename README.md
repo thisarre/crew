@@ -1,36 +1,54 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Crew — Gestion d'équipe technique
 
-## Getting Started
+Application Next.js 14 / Supabase décrite dans `crew-dev-plan.md`. Suis la règle des « 3 cases » : ✅ Code · ✅ Tests · ✅ Validation humaine pour chaque feature.
 
-First, run the development server:
+### Pile technique
+
+- Next.js 14 (App Router, TypeScript strict)
+- Tailwind CSS + tokens Connectify
+- Supabase (Postgres, Auth, Realtime, Storage)
+- Vitest + Playwright pour les tests
+
+## Commandes clés
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run dev          # serveur Next.js
+npm run lint         # ESLint
+npm run test         # Vitest (unit + integration)
+npm run test:e2e     # Playwright
+npm run db:migrate   # supabase migration up
+npm run db:seed      # scripts/seed.ts
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Supabase local
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+1. Installer le CLI : `npm install -g supabase`
+2. Lancer les services locaux : `supabase start`
+3. Appliquer le schéma : `npm run db:migrate`
+4. Alimenter les données Alpha : `npm run db:seed`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Le fichier `supabase/config.toml` pointe vers l'instance locale par défaut (`127.0.0.1`). Expose les variables suivantes pour l'app et les scripts :
 
-## Learn More
+```bash
+NEXT_PUBLIC_SUPABASE_URL="http://127.0.0.1:54321"
+NEXT_PUBLIC_SUPABASE_ANON_KEY="<anon-key>"
+SUPABASE_SERVICE_ROLE_KEY="<service-role>" # requis pour le seed
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Types et client Supabase
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `src/types/database.ts` contient les types générés à partir de la migration.
+- `src/lib/supabase/server.ts` fournit `createClient()` (mock automatique pendant les tests via `SUPABASE_MOCK=true`).
+- `src/lib/supabase/client.ts` crée le client navigateur via `@supabase/ssr`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Données Bible Segond 21
 
-## Deploy on Vercel
+Par contrainte de licence, le dépôt n'embarque qu'un extrait de démonstration (`public/bible-segond21.json`).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Pour respecter la spec :
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Récupère la Bible Segond 21 sous licence (JSON ou CSV).
+2. Convertis-la au format attendu: `[{ book, chapter, verse, text, reference }]`.
+3. Remplace `public/bible-segond21.json` par l'intégralité (~31k versets).
+
+Les helpers de recherche (Sprint 6) consommeront directement ce fichier statique.
