@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Link from 'next/link';
+import type { Route } from 'next';
 import { useRouter } from 'next/navigation';
 import { IconArrowLeft } from '@tabler/icons-react';
 
@@ -76,6 +77,7 @@ export function CodePad({ profile, isAdmin }: CodePadProps) {
     const response = await fetch('/api/auth/verify-code', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
       body: JSON.stringify({ code: value, profile_id: profile.id, is_admin: isAdmin }),
     });
 
@@ -95,7 +97,7 @@ export function CodePad({ profile, isAdmin }: CodePadProps) {
     <div>
       <motion.div variants={fadeUpVariants} initial="hidden" animate="visible" custom={0} className="mb-4">
         <Link
-          href="/"
+          href={'/' as Route}
           className="inline-flex items-center gap-1 py-1.5 pr-2.5 text-[13px] font-medium text-[var(--color-text-secondary)]"
         >
           <IconArrowLeft size={16} stroke={2} /> Retour

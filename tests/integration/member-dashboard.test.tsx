@@ -1,9 +1,13 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { MemberDashboard } from '@/components/member/dashboard';
 import { getMemberDashboardData } from '@/data/member-dashboard';
+
+vi.mock('next/navigation', () => ({
+  useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
+}));
 
 const dashboardData = getMemberDashboardData();
 
@@ -23,6 +27,6 @@ describe('MemberDashboard', () => {
     expect(screen.getByText('Semaine')).toBeInTheDocument();
     expect(screen.getByText('Call')).toBeInTheDocument();
     expect(screen.getByText(/Prochain événement/i)).toBeInTheDocument();
-    expect(screen.getByText(/Dimanche 23 juin/i)).toBeInTheDocument();
+    expect(screen.getByText(/Dimanche 22 juin/i)).toBeInTheDocument();
   });
 });

@@ -25,10 +25,10 @@ const config: Config = {
         "warning-fg": "#854F0B",
       },
       spacing: {
-        3.5: "14px",
-        4.5: "18px",
-        5.5: "22px",
-        7.5: "30px",
+        "3.5": "14px",
+        "4.5": "18px",
+        "5.5": "22px",
+        "7.5": "30px",
       },
       borderRadius: {
         xs: "8px",
@@ -49,9 +49,9 @@ const config: Config = {
           "100%": { backgroundPosition: "200% 50%" },
         },
         pulseDot: {
-          "0%": { transform: "scale(1)", opacity: 1 },
-          "50%": { transform: "scale(1.2)", opacity: 0.7 },
-          "100%": { transform: "scale(1)", opacity: 1 },
+          "0%": { transform: "scale(1)", opacity: "1" },
+          "50%": { transform: "scale(1.2)", opacity: "0.7" },
+          "100%": { transform: "scale(1)", opacity: "1" },
         },
       },
       animation: {

@@ -21,16 +21,18 @@ describe('BottomNav', () => {
     vi.useRealTimers();
   });
 
-  it('shows Service Day tab on Saturday evening', () => {
+  it('shows Service Day tab (always accessible)', () => {
     vi.setSystemTime(new Date('2025-06-21T20:00:00Z'));
     render(<BottomNav nextEventDate="2025-06-22T08:00:00Z" />);
     expect(screen.getByLabelText('Service Day')).toBeInTheDocument();
   });
 
-  it('hides Service Day tab on Tuesday with distant event', () => {
+  it('keeps the three core tabs even with a distant event', () => {
     vi.setSystemTime(new Date('2025-06-17T10:00:00Z'));
     render(<BottomNav nextEventDate="2025-06-23T08:00:00Z" />);
-    expect(screen.queryByLabelText('Service Day')).not.toBeInTheDocument();
+    expect(screen.getByLabelText('Accueil')).toBeInTheDocument();
+    expect(screen.getByLabelText('Calendrier')).toBeInTheDocument();
+    expect(screen.getByLabelText('Service Day')).toBeInTheDocument();
   });
 
   it('marks the current route as active', () => {

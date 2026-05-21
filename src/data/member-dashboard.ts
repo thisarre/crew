@@ -55,7 +55,7 @@ export type DashboardData = {
   };
 };
 
-export const MOCK_NEXT_EVENT_DATE = '2025-06-22T08:00:00Z';
+export const MOCK_NEXT_EVENT_DATE = '2025-06-22T12:00:00Z';
 
 const buildCalendarDays = (): CalendarDay[] => {
   const placeholders = Array<CalendarDay>(5).fill({});
@@ -97,7 +97,15 @@ const buildCalendarDays = (): CalendarDay[] => {
 
 const WEEKDAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
-export const getMemberDashboardData = (profileId?: string): DashboardData => {
+export type MemberDashboardOptions = {
+  /** Si true, la carte "Valide ton mois" est masquée (le membre a déjà validé) */
+  monthValidated?: boolean;
+};
+
+export const getMemberDashboardData = (
+  profileId?: string,
+  options: MemberDashboardOptions = {},
+): DashboardData => {
   const resolvedProfileId = profileId ?? PROFILE_IDS.isaac;
   const profileSeed = PROFILES_SEED.find(profile => profile.id === resolvedProfileId);
   const name = profileSeed?.display_name ?? 'Membre';
@@ -112,13 +120,15 @@ export const getMemberDashboardData = (profileId?: string): DashboardData => {
       avatarColor,
       subtitle: 'Juin commence',
     },
-    validation: {
-      needsAction: true,
-      monthLabel: 'Valide ton mois de juin',
-      description: '5 engagements prévus · tu es présent par défaut, ajuste si besoin',
-      totalEngagements: 5,
-      buttonLabel: 'Voir et valider',
-    },
+    validation: options.monthValidated
+      ? null
+      : {
+          needsAction: true,
+          monthLabel: 'Valide ton mois de juin',
+          description: '5 engagements prévus · tu es présent par défaut, ajuste si besoin',
+          totalEngagements: 5,
+          buttonLabel: 'Voir et valider',
+        },
     weeklyThought: {
       label: 'Pensée de la semaine',
       verse: '"Que chacun mette au service des autres le don qu’il a reçu."',
@@ -137,7 +147,7 @@ export const getMemberDashboardData = (profileId?: string): DashboardData => {
     nextEvent: {
       countdownLabel: 'Dans 4 jours',
       skillBadge: 'Sono',
-      title: 'Dimanche 23 juin',
+      title: 'Dimanche 22 juin',
       details: 'Arrivée 13h30 · Salle principale',
       teammates: [
         { initials: 'C', color: '#96D8D0', name: 'Chana' },

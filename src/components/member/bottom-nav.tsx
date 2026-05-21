@@ -40,18 +40,18 @@ export function shouldShowServiceDayTab(nextEventDate?: string | Date | null, no
 export function BottomNav({ nextEventDate }: BottomNavProps) {
   const pathname = usePathname() ?? '';
 
-  const navItems = useMemo<BottomNavItem[]>(() => {
-    const baseItems: BottomNavItem[] = [
+  // L'onglet Service Day est toujours accessible (la vue gère elle-même l'état "pas de service").
+  // shouldShowServiceDayTab sert à mettre en avant l'onglet le jour J (point pulsant).
+  const highlightServiceDay = shouldShowServiceDayTab(nextEventDate);
+
+  const navItems = useMemo<BottomNavItem[]>(
+    () => [
       { id: 'home', label: 'Accueil', href: '/dashboard', icon: IconHome },
       { id: 'calendar', label: 'Calendrier', href: '/calendar', icon: IconCalendar },
-    ];
-
-    if (shouldShowServiceDayTab(nextEventDate)) {
-      baseItems.push({ id: 'service', label: 'Service Day', href: '/service-day', icon: IconClockPlay });
-    }
-
-    return baseItems;
-  }, [nextEventDate]);
+      { id: 'service', label: 'Service Day', href: '/service-day', icon: IconClockPlay },
+    ],
+    [],
+  );
 
   const isActive = (href: string) => {
     const normalizedHref = href.endsWith('/') ? href.slice(0, -1) : href;
@@ -87,6 +87,9 @@ export function BottomNav({ nextEventDate }: BottomNavProps) {
                     stroke={2}
                     className={`relative z-10 ${active ? 'text-white' : 'text-[var(--color-text-secondary)]'}`}
                   />
+                  {item.id === 'service' && highlightServiceDay && !active && (
+                    <span className="absolute right-1.5 top-1.5 z-10 h-2 w-2 rounded-full bg-[var(--color-sage)] ring-2 ring-white animate-pulse-dot" />
+                  )}
                 </div>
                 <span className={`text-[11px] font-semibold tracking-[0.3px] ${active ? 'text-ink' : 'text-[var(--color-text-secondary)]'}`}>
                   {item.label}

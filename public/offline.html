@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Crew — Hors ligne</title>
+    <style>
+      :root {
+        --bg: #F4F4F2;
+        --ink: #16161B;
+        --sage: #DAF4AA;
+        --secondary: #6B6B6F;
+      }
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      body {
+        font-family: -apple-system, "Segoe UI", Inter, sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+      }
+      .card {
+        max-width: 380px;
+        width: 100%;
+        background: #fff;
+        border-radius: 22px;
+        padding: 32px 24px;
+        text-align: center;
+      }
+      .badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--ink);
+        color: var(--sage);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.4px;
+        text-transform: uppercase;
+        padding: 4px 10px;
+        border-radius: 100px;
+        margin-bottom: 16px;
+      }
+      .dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--sage);
+      }
+      h1 {
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: -0.3px;
+        margin-bottom: 8px;
+      }
+      p {
+        font-size: 14px;
+        color: var(--secondary);
+        line-height: 1.5;
+        margin-bottom: 24px;
+      }
+      button {
+        background: var(--ink);
+        color: #fff;
+        border: none;
+        border-radius: 100px;
+        padding: 12px 20px;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <span class="badge"><span class="dot"></span>Hors ligne</span>
+      <h1>Pas de connexion</h1>
+      <p>On dirait que tu n'as pas de réseau pour le moment. Reviens quand ça revient — Crew gardera ta dernière session.</p>
+      <button onclick="window.location.reload()">Réessayer</button>
+    </div>
+  </body>
+</html>

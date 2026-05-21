@@ -1,8 +1,9 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
   IconBell,
@@ -12,9 +13,14 @@ import {
   IconCalendar,
   IconHeadphones,
   IconHeart,
+  IconX,
 } from '@tabler/icons-react';
 
+import { NotificationToggle } from '@/components/shared/notification-toggle';
+import { ConfirmDialog } from '@/components/shared/confirm-dialog';
 import type { CalendarDay, DashboardData } from '@/data/member-dashboard';
+
+export type NextAssignmentInfo = { id: string; dateLabel: string; skillName: string } | null;
 
 const EASE_PREMIUM = [0.16, 1, 0.3, 1] as const;
 
@@ -40,11 +46,56 @@ const calendarTypeStyles: Record<string, string> = {
 
 type MemberDashboardProps = {
   data: DashboardData;
+  nextAssignment?: NextAssignmentInfo;
 };
 
-export function MemberDashboard({ data }: MemberDashboardProps) {
+export function MemberDashboard({ data, nextAssignment = null }: MemberDashboardProps) {
+  const router = useRouter();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+
+  const handleCancelNext = async () => {
+    if (!nextAssignment || cancelling) return;
+    setCancelError(null);
+    setCancelling(true);
+    try {
+      const res = await fetch(`/api/my/assignments/${nextAssignment.id}/cancel`, {
+        method: 'POST',
+        credentials: 'same-origin',
+      });
+      const body = await res.json().catch(() => ({ ok: false, error: `HTTP ${res.status}` }));
+      if (!res.ok || !body.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
+      setConfirmOpen(false);
+      router.refresh();
+    } catch (err) {
+      setCancelError(err instanceof Error ? err.message : 'unknown_error');
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-4 pb-10">
+      <ConfirmDialog
+        open={confirmOpen}
+        title="Tu ne peux plus assurer ?"
+        message={
+          nextAssignment
+            ? `Ton créneau du ${nextAssignment.dateLabel} (${nextAssignment.skillName}) sera libéré et l'équipe sera prévenue.`
+            : undefined
+        }
+        confirmLabel="Oui, j'annule"
+        cancelLabel="Garder"
+        tone="danger"
+        busy={cancelling}
+        error={cancelError}
+        onConfirm={handleCancelNext}
+        onCancel={() => {
+          setConfirmOpen(false);
+          setCancelError(null);
+        }}
+      />
       <motion.section variants={fadeUp} className="flex items-center justify-between">
         <div>
           <p className="text-[28px] font-bold leading-[1.1] tracking-[-0.5px] text-ink">Hey {data.profile.name}</p>
@@ -100,10 +151,13 @@ export function MemberDashboard({ data }: MemberDashboardProps) {
             </div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.6px] text-ink">Ton mois</p>
           </div>
-          <div className="flex items-center gap-1 text-[12px] font-semibold text-[var(--color-text-secondary)]">
+          <Link
+            href={'/calendar' as Route}
+            className="flex items-center gap-1 text-[12px] font-semibold text-[var(--color-text-secondary)] transition active:scale-95"
+          >
             <span>Voir</span>
             <IconArrowUpRight size={14} stroke={2} />
-          </div>
+          </Link>
         </div>
         <p className="text-[22px] font-bold tracking-[-0.3px] text-ink">{data.calendar.monthLabel}</p>
         <div className="mt-4 grid grid-cols-7 gap-1 text-center">
@@ -168,6 +222,16 @@ export function MemberDashboard({ data }: MemberDashboardProps) {
             </div>
             <p className="text-[13px] font-medium text-ink">{data.nextEvent.theme}</p>
           </div>
+          {nextAssignment && (
+            <button
+              type="button"
+              onClick={() => setConfirmOpen(true)}
+              className="flex w-full items-center justify-center gap-1.5 rounded-full border border-[var(--color-border)] bg-white py-2.5 text-[12px] font-semibold text-[var(--color-text-secondary)] active:scale-[0.98]"
+            >
+              <IconX size={13} stroke={2} />
+              Je ne peux plus assurer
+            </button>
+          )}
         </div>
       </motion.section>
 
@@ -192,6 +256,10 @@ export function MemberDashboard({ data }: MemberDashboardProps) {
             </p>
           </div>
         </div>
+      </motion.section>
+
+      <motion.section variants={fadeUp}>
+        <NotificationToggle profileId={data.profile.id} />
       </motion.section>
     </motion.div>
   );
