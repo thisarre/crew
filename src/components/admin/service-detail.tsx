@@ -15,6 +15,7 @@ import {
   IconSparkles,
   IconTrash,
   IconVideo,
+  IconX,
 } from '@tabler/icons-react';
 
 import type { ServiceDetailData, ServiceSlotDetail } from '@/lib/queries/admin';
