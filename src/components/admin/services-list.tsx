@@ -41,6 +41,7 @@ const statusBadge = (service: ServiceListItem) => {
 const eventTypeLabel = (type: ServiceListItem['eventType']) => {
   if (type === 'midweek_service') return 'Semaine';
   if (type === 'team_call') return 'Call équipe';
+  if (type === 'special_event') return 'Spécial';
   return 'Dimanche';
 };
 

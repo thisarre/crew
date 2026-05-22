@@ -36,6 +36,7 @@ const SkillIcon = ({ badge, size = 18 }: { badge: 'sono' | 'camera' | 'diffusion
 const eventTypeLabel = (type: ServiceDetailData['service']['event_type']) => {
   if (type === 'midweek_service') return 'Service de semaine';
   if (type === 'team_call') return 'Call équipe';
+  if (type === 'special_event') return 'Événement spécial';
   return 'Culte dimanche';
 };
 

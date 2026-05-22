@@ -14,6 +14,7 @@ import {
   IconDeviceTv,
   IconHeadphones,
   IconSparkles,
+  IconStar,
   IconUsers,
   IconVideo,
   IconX,
@@ -26,7 +27,7 @@ const fadeUp = {
 };
 const container = { hidden: {}, visible: { transition: { staggerChildren: 0.07 } } };
 
-type EventType = 'sunday' | 'midweek' | 'call';
+type EventType = 'sunday' | 'midweek' | 'call' | 'special';
 
 // Les UUIDs correspondent aux skills réels seedés en base.
 const SKILLS = [
@@ -141,7 +142,13 @@ export function ServiceNew() {
     setSubmitError(null);
     setSubmitting(true);
     try {
-      const eventType = type === 'sunday' ? 'sunday_service' : type === 'midweek' ? 'midweek_service' : 'team_call';
+      const eventTypeMap: Record<EventType, string> = {
+        sunday: 'sunday_service',
+        midweek: 'midweek_service',
+        call: 'team_call',
+        special: 'special_event',
+      };
+      const eventType = eventTypeMap[type];
       const initialAssignmentsByDate: Record<
         string,
         { skillId: string; profileId: string; isTrainee?: boolean }[]
@@ -222,10 +229,11 @@ export function ServiceNew() {
         <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.5px] text-[var(--color-text-secondary)]">
           Type
         </p>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-4 gap-2">
           <TypeChoice id="sunday" label="Dimanche" Icon={IconBuildingChurch} color="#DAF4AA" active={type === 'sunday'} onClick={setType} />
           <TypeChoice id="midweek" label="Semaine" Icon={IconClock} color="#96D8D0" active={type === 'midweek'} onClick={setType} />
           <TypeChoice id="call" label="Call" Icon={IconUsers} color="#D2B4F1" active={type === 'call'} onClick={setType} />
+          <TypeChoice id="special" label="Spécial" Icon={IconStar} color="#F4D9A0" active={type === 'special'} onClick={setType} />
         </div>
       </motion.section>
 

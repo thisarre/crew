@@ -16,7 +16,7 @@ const MONTHS_FR = [
 const WEEKDAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
 const eventTypeShort = (t: string) =>
-  t === 'midweek_service' ? 'Semaine' : t === 'team_call' ? 'Call' : 'Culte';
+  t === 'midweek_service' ? 'Semaine' : t === 'team_call' ? 'Call' : t === 'special_event' ? 'Spécial' : 'Culte';
 
 const statusBadge = (s: string): { text: string; cls: string } => {
   if (s === 'cancelled') return { text: 'Annulé', cls: 'bg-[var(--color-error-bg)] text-[var(--color-error-fg)]' };
