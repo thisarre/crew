@@ -14,7 +14,7 @@ const AssignmentSchema = z.object({
 const Body = z.object({
   eventType: z.enum(['sunday_service', 'midweek_service', 'team_call']),
   dates: z.array(z.string().regex(/^\d{4}-\d{2}-\d{2}$/)).min(1),
-  startTime: z.string().min(1),
+  startTime: z.string().min(1).optional(),
   arrivalTime: z.string().optional(),
   location: z.string().optional(),
   spiritualTheme: z.string().optional(),
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
         createService(supabase, {
           eventType: payload.eventType,
           serviceDate: date,
-          startTime: payload.startTime,
+          startTime: payload.startTime ?? '',
           arrivalTime: payload.arrivalTime,
           location: payload.location,
           spiritualTheme: payload.spiritualTheme,

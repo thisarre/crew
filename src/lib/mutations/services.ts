@@ -10,7 +10,7 @@ export type CreateServiceInput = {
   organizationId?: string;
   eventType: ServiceInsert['event_type'];
   serviceDate: string; // yyyy-mm-dd
-  startTime: string; // HH:mm or HH:mm:ss
+  startTime?: string; // HH:mm or HH:mm:ss — absent pour sunday/midweek
   arrivalTime?: string;
   location?: string;
   spiritualTheme?: string;
@@ -40,7 +40,7 @@ export async function createService(
     event_type: input.eventType,
     title: input.eventType === 'sunday_service' ? 'Culte dimanche' : input.eventType === 'midweek_service' ? 'Service de semaine' : 'Call équipe',
     service_date: input.serviceDate,
-    start_time: toSqlTime(input.startTime),
+    start_time: input.startTime ? toSqlTime(input.startTime) : null,
     arrival_time: input.arrivalTime ? toSqlTime(input.arrivalTime) : null,
     location: input.location ?? null,
     spiritual_theme: input.spiritualTheme ?? null,

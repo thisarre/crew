@@ -72,6 +72,7 @@ export function ServiceNew() {
   const [sundays, setSundays] = useState(() => nextMonthSundays());
   const [start, setStart] = useState('14h00');
   const [arrival, setArrival] = useState('13h30');
+  const [duration, setDuration] = useState('45 min');
   const [activeSkills, setActiveSkills] = useState<Set<string>>(new Set(['sono', 'camera', 'diffusion']));
 
   const includedSundays = useMemo(() => sundays.filter(s => s.included), [sundays]);
@@ -173,8 +174,9 @@ export function ServiceNew() {
         body: JSON.stringify({
           eventType,
           dates,
-          startTime: start,
-          arrivalTime: arrival,
+          startTime: type === 'call' ? start : undefined,
+          arrivalTime: type !== 'call' ? arrival : undefined,
+          location: type === 'call' ? duration : undefined,
           slotSkillIds: skillIdsActive,
           initialAssignmentsByDate: withTeam ? initialAssignmentsByDate : undefined,
         }),
@@ -271,8 +273,14 @@ export function ServiceNew() {
             Horaire
           </p>
           <div className="flex gap-1.5">
-            <TimeSegment label="Début" value={start} onChange={setStart} />
-            <TimeSegment label="Arrivée" value={arrival} onChange={setArrival} />
+            {type === 'call' ? (
+              <>
+                <TimeSegment label="Début" value={start} onChange={setStart} />
+                <TimeSegment label="Durée" value={duration} onChange={setDuration} />
+              </>
+            ) : (
+              <TimeSegment label="Arrivée" value={arrival} onChange={setArrival} />
+            )}
           </div>
         </div>
 
