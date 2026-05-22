@@ -118,3 +118,90 @@ export async function setMemberActive(
   const { error } = await client.from('profiles').update({ is_active: isActive }).eq('id', profileId);
   if (error) throw error;
 }
+
+/**
+ * Supprime définitivement un membre et toutes ses données liées.
+ *
+ * Le schéma n'a pas de `ON DELETE CASCADE` : on supprime donc explicitement les lignes
+ * dépendantes (affectations, compétences, validations, abonnements push, dispos, appréciations)
+ * avant le profil lui-même.
+ *
+ * Garde-fou : refuse de supprimer le dernier administrateur (sinon plus personne ne peut administrer).
+ * La protection contre l'auto-suppression est gérée côté route API (qui connaît la session).
+ */
+export async function deleteMember(client: SupabaseServerClient, profileId: string): Promise<void> {
+  if (!profileId) throw new Error('profile_id_required');
+
+  // 1. Vérifie l'existence et applique le garde-fou "dernier admin".
+  const { data: profile, error: profileError } = await client
+    .from('profiles')
+    .select('id, role')
+    .eq('id', profileId)
+    .maybeSingle();
+  if (profileError) throw profileError;
+  if (!profile) throw new Error('profile_not_found');
+
+  if (profile.role === 'admin') {
+    const { data: admins, error: adminsError } = await client
+      .from('profiles')
+      .select('id')
+      .eq('role', 'admin');
+    if (adminsError) throw adminsError;
+    if ((admins?.length ?? 0) <= 1) throw new Error('last_admin');
+  }
+
+  // 2. Détache les éventuels appairages pointant vers les affectations du membre
+  //    (FK assignments.is_paired_with → assignments.id, sans cascade).
+  const { data: ownAssignments, error: ownAssignmentsError } = await client
+    .from('assignments')
+    .select('id')
+    .eq('profile_id', profileId);
+  if (ownAssignmentsError) throw ownAssignmentsError;
+  const ownAssignmentIds = (ownAssignments ?? []).map(a => a.id);
+  if (ownAssignmentIds.length > 0) {
+    const { error: unpairError } = await client
+      .from('assignments')
+      .update({ is_paired_with: null })
+      .in('is_paired_with', ownAssignmentIds);
+    if (unpairError) throw unpairError;
+  }
+
+  // 3. Supprime les lignes liées.
+  {
+    const { error } = await client.from('assignments').delete().eq('profile_id', profileId);
+    if (error) throw error;
+  }
+  {
+    const { error } = await client.from('member_skills').delete().eq('profile_id', profileId);
+    if (error) throw error;
+  }
+  {
+    // Le membre pouvait aussi être renseigné comme formateur d'autres compétences.
+    const { error } = await client.from('member_skills').delete().eq('trained_by', profileId);
+    if (error) throw error;
+  }
+  {
+    const { error } = await client.from('monthly_validations').delete().eq('profile_id', profileId);
+    if (error) throw error;
+  }
+  {
+    const { error } = await client.from('push_subscriptions').delete().eq('profile_id', profileId);
+    if (error) throw error;
+  }
+  {
+    const { error } = await client.from('availabilities').delete().eq('profile_id', profileId);
+    if (error) throw error;
+  }
+  {
+    const { error } = await client.from('appreciations').delete().eq('from_profile_id', profileId);
+    if (error) throw error;
+  }
+  {
+    const { error } = await client.from('appreciations').delete().eq('to_profile_id', profileId);
+    if (error) throw error;
+  }
+
+  // 4. Supprime enfin le profil.
+  const { error: deleteError } = await client.from('profiles').delete().eq('id', profileId);
+  if (deleteError) throw deleteError;
+}

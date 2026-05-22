@@ -30,6 +30,20 @@ export const fetchProfiles = (client: SupabaseServerClient) =>
     client.from('profiles').select('*').eq('organization_id', ORG_ID) as unknown as PromiseLike<QueryResult<ProfileRow>>,
   );
 
+/** Récupère un profil par son id (ou null s'il n'existe pas). Utilisé par le flux de connexion. */
+export const fetchProfileById = async (
+  client: SupabaseServerClient,
+  id: string,
+): Promise<ProfileRow | null> => {
+  const { data, error } = (await client
+    .from('profiles')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle()) as { data: ProfileRow | null; error: Error | null };
+  if (error) throw error;
+  return data ?? null;
+};
+
 export const fetchSkills = (client: SupabaseServerClient) =>
   fetchAll<SkillRow>(
     client
@@ -110,16 +124,26 @@ export type AggregatedAdminData = {
   spiritual: SpiritualRow[];
 };
 
-// Mardi 17 juin 2025, 8h UTC — sert de "aujourd'hui" pour les fixtures et les calculs de countdown.
-const REFERENCE_TODAY = new Date('2025-06-17T08:00:00Z');
-
-export const getReferenceToday = () => REFERENCE_TODAY;
+/**
+ * "Aujourd'hui" de référence.
+ * En production : la vraie date du jour (new Date()).
+ * En tests/démo : on peut figer la date via la variable d'env CREW_REFERENCE_TODAY
+ * (ISO 8601, ex: "2025-06-17T08:00:00Z") pour garder les fixtures déterministes.
+ */
+export const getReferenceToday = (): Date => {
+  const override = process.env.CREW_REFERENCE_TODAY;
+  if (override) {
+    const parsed = new Date(override);
+    if (!Number.isNaN(parsed.getTime())) return parsed;
+  }
+  return new Date();
+};
 
 export const loadAdminContext = async (
   client: SupabaseServerClient,
   options: { year?: number; month?: number } = {},
 ): Promise<AggregatedAdminData> => {
-  const now = REFERENCE_TODAY;
+  const now = getReferenceToday();
   const year = options.year ?? now.getUTCFullYear();
   const month = options.month ?? now.getUTCMonth() + 1;
 
@@ -141,7 +165,7 @@ export const buildMembersOverview = (
   ctx: AggregatedAdminData,
   options: { year?: number; month?: number } = {},
 ): MemberWithSkills[] => {
-  const now = REFERENCE_TODAY;
+  const now = getReferenceToday();
   const year = options.year ?? now.getUTCFullYear();
   const month = options.month ?? now.getUTCMonth() + 1;
   const skillsById = new Map(ctx.skills.map(skill => [skill.id, skill]));
@@ -283,7 +307,7 @@ export const formatShortFrenchDate = (iso: string): string => {
   return `${date.getUTCDate()} ${FRENCH_MONTHS[date.getUTCMonth()]}`;
 };
 
-export const formatCountdown = (iso: string, now: Date = REFERENCE_TODAY): string => {
+export const formatCountdown = (iso: string, now: Date = getReferenceToday()): string => {
   const target = new Date(iso);
   const diff = target.getTime() - now.getTime();
   const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
@@ -305,7 +329,7 @@ export const buildAdminDashboard = (
   adminProfile: ProfileRow,
   options: { year?: number; month?: number } = {},
 ): AdminDashboardData => {
-  const now = REFERENCE_TODAY;
+  const now = getReferenceToday();
   const year = options.year ?? now.getUTCFullYear();
   const month = options.month ?? now.getUTCMonth() + 1;
 
@@ -570,7 +594,7 @@ export const buildServiceDetail = (
 ): ServiceDetailData | null => {
   const service = ctx.services.find(s => s.id === serviceId);
   if (!service) return null;
-  const now = REFERENCE_TODAY;
+  const now = getReferenceToday();
   const serviceSlots = ctx.slots.filter(sl => sl.service_id === serviceId);
   const serviceAssignments = ctx.assignments.filter(a => a.service_id === serviceId);
 
@@ -756,7 +780,7 @@ export const buildMemberDetail = (
       level: ms.level,
     }));
 
-  const now = REFERENCE_TODAY;
+  const now = getReferenceToday();
   const upcomingAssignments = ctx.assignments
     .filter(a => a.profile_id === profile.id && a.status === 'present')
     .reduce<{ date: string; label: string; skill: string }[]>((acc, a) => {

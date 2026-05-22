@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { createMockSupabaseClient, __resetMockData } from '@/lib/supabase/mock';
 import type { SupabaseServerClient } from '@/lib/supabase/server';
 import {
+  deleteMember,
   deriveInitials,
   inviteMember,
   removeMemberSkill,
@@ -84,5 +85,39 @@ describe('team mutations', () => {
     const ctx2 = await loadAdminContext(client);
     const overview2 = buildMembersOverview(ctx2);
     expect(overview2.some(m => m.profile.id === PROFILE_IDS.gloria)).toBe(true);
+  });
+
+  it('deleteMember supprime le profil et ses données liées', async () => {
+    const client = getClient();
+
+    // Gloria possède des compétences dans le seed.
+    const before = await loadAdminContext(client);
+    expect(before.profiles.some(p => p.id === PROFILE_IDS.gloria)).toBe(true);
+    expect(before.memberSkills.some(ms => ms.profile_id === PROFILE_IDS.gloria)).toBe(true);
+
+    await deleteMember(client, PROFILE_IDS.gloria);
+
+    const after = await loadAdminContext(client);
+    expect(after.profiles.some(p => p.id === PROFILE_IDS.gloria)).toBe(false);
+    expect(after.memberSkills.some(ms => ms.profile_id === PROFILE_IDS.gloria)).toBe(false);
+    expect(after.assignments.some(a => a.profile_id === PROFILE_IDS.gloria)).toBe(false);
+    // Les autres membres restent intacts.
+    expect(after.profiles.some(p => p.id === PROFILE_IDS.isaac)).toBe(true);
+  });
+
+  it('deleteMember refuse de supprimer le dernier administrateur', async () => {
+    const client = getClient();
+    await expect(deleteMember(client, PROFILE_IDS.alpha)).rejects.toThrow('last_admin');
+
+    // Alpha est toujours là.
+    const ctx = await loadAdminContext(client);
+    expect(ctx.profiles.some(p => p.id === PROFILE_IDS.alpha)).toBe(true);
+  });
+
+  it('deleteMember échoue proprement pour un profil inexistant', async () => {
+    const client = getClient();
+    await expect(deleteMember(client, 'inexistant-0000-0000-0000-000000000000')).rejects.toThrow(
+      'profile_not_found',
+    );
   });
 });

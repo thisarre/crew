@@ -11,6 +11,7 @@ import type {
   ValidationEventType,
   ValidationStatus,
 } from '@/data/member-validation';
+import type { CalendarDay, DashboardData } from '@/data/member-dashboard';
 
 const WEEKDAYS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 
@@ -163,6 +164,173 @@ export async function getNextMemberAssignment(
     date: next.service.service_date,
     dateLabel: formatDateLabel(next.service.service_date),
     skillName: next.skillName,
+  };
+}
+
+// ---------- Dashboard membre (écran d'accueil) ----------
+
+const DASHBOARD_LEGEND = [
+  { color: 'bg-[var(--color-sage)]', label: 'Culte' },
+  { color: 'bg-[var(--color-mint)]', label: 'Semaine' },
+  { color: 'bg-[var(--color-lilac)]', label: 'Call' },
+];
+
+const buildDashboardCalendarDays = (
+  services: { date: string; type: ValidationEventType }[],
+  year: number,
+  month: number,
+  now: Date,
+): CalendarDay[] => {
+  const firstDay = new Date(Date.UTC(year, month - 1, 1));
+  const jsWeekday = firstDay.getUTCDay();
+  const leading = jsWeekday === 0 ? 6 : jsWeekday - 1;
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const todayDay =
+    now.getUTCFullYear() === year && now.getUTCMonth() + 1 === month ? now.getUTCDate() : -1;
+
+  const cells: CalendarDay[] = [];
+  for (let i = 0; i < leading; i++) cells.push({});
+  for (let day = 1; day <= daysInMonth; day++) {
+    const evt = services.find(s => new Date(s.date).getUTCDate() === day);
+    cells.push({ value: day, type: evt?.type, isToday: day === todayDay });
+  }
+  return cells;
+};
+
+/**
+ * Construit le dashboard membre (écran d'accueil) à partir des vraies données Supabase :
+ * profil, validation du mois, pensée publiée, calendrier du mois courant, prochain événement.
+ * Tous les blocs optionnels sont `null` quand il n'y a pas de donnée (états vides).
+ */
+export async function loadMemberDashboard(
+  client: SupabaseServerClient,
+  profileId: string,
+): Promise<DashboardData> {
+  const ctx = await loadAdminContext(client);
+  const now = getReferenceToday();
+  const year = now.getUTCFullYear();
+  const month = now.getUTCMonth() + 1;
+
+  const profile = ctx.profiles.find(p => p.id === profileId);
+  const name = profile?.display_name ?? 'Membre';
+  const initials = profile?.initials ?? 'M';
+  const avatarColor = profile?.avatar_color ?? '#96D8D0';
+  const subtitle = capitalize(
+    `${FRENCH_WEEKDAYS_LONG[now.getUTCDay()]} ${now.getUTCDate()} ${FRENCH_MONTHS[now.getUTCMonth()]}`,
+  );
+
+  // --- Validation du mois courant ---
+  const monthValidated = ctx.validations.some(v => v.profile_id === profileId);
+  const monthlyEngagements = ctx.assignments.filter(a => {
+    if (a.profile_id !== profileId || a.status !== 'present') return false;
+    const service = ctx.services.find(s => s.id === a.service_id);
+    if (!service) return false;
+    const d = new Date(service.service_date);
+    return d.getUTCFullYear() === year && d.getUTCMonth() + 1 === month;
+  }).length;
+  const monthName = FRENCH_MONTHS[month - 1] ?? '';
+  const validation: DashboardData['validation'] = monthValidated
+    ? null
+    : {
+        needsAction: true,
+        monthLabel: `Valide ton mois de ${monthName}`,
+        description:
+          monthlyEngagements > 0
+            ? `${monthlyEngagements} engagement${monthlyEngagements > 1 ? 's' : ''} prévu${
+                monthlyEngagements > 1 ? 's' : ''
+              } · tu es présent par défaut, ajuste si besoin`
+            : 'Confirme tes disponibilités pour le mois',
+        totalEngagements: monthlyEngagements,
+        buttonLabel: 'Voir et valider',
+      };
+
+  // --- Pensée de la semaine (dernier contenu publié) ---
+  const thought = ctx.spiritual
+    .filter(
+      s =>
+        s.content_type === 'weekly_thought' &&
+        s.status === 'published' &&
+        Boolean(s.published_at) &&
+        new Date(s.published_at as string).getTime() <= now.getTime(),
+    )
+    .sort(
+      (a, b) =>
+        new Date(b.published_at as string).getTime() - new Date(a.published_at as string).getTime(),
+    )[0];
+  const weeklyThought: DashboardData['weeklyThought'] = thought
+    ? {
+        label: 'Pensée de la semaine',
+        verse: `"${thought.verse_text}"`,
+        reference: thought.verse_reference ?? '',
+      }
+    : null;
+
+  // --- Calendrier du mois courant (services visibles par les membres) ---
+  const monthServices = ctx.services.filter(s => {
+    if (s.status !== 'published' && s.status !== 'completed') return false;
+    const d = new Date(s.service_date);
+    return d.getUTCFullYear() === year && d.getUTCMonth() + 1 === month;
+  });
+  const calendar: DashboardData['calendar'] = {
+    monthLabel: `${capitalize(monthName)} ${year}`,
+    weekdays: WEEKDAYS,
+    days: buildDashboardCalendarDays(
+      monthServices.map(s => ({ date: s.service_date, type: s.event_type as ValidationEventType })),
+      year,
+      month,
+      now,
+    ),
+    legend: DASHBOARD_LEGEND,
+  };
+
+  // --- Prochain événement (prochaine assignation présente) ---
+  const nextCandidate = ctx.assignments
+    .filter(a => a.profile_id === profileId && a.status === 'present')
+    .map(a => {
+      const service = ctx.services.find(s => s.id === a.service_id);
+      if (!service) return null;
+      const slot = ctx.slots.find(sl => sl.id === a.slot_id);
+      const skill = ctx.skills.find(sk => sk.id === slot?.skill_id);
+      return { service, skill, t: new Date(service.service_date).getTime() };
+    })
+    .filter((x): x is NonNullable<typeof x> => Boolean(x) && x!.t >= now.getTime())
+    .sort((x, y) => x.t - y.t)[0];
+
+  let nextEvent: DashboardData['nextEvent'] = null;
+  if (nextCandidate) {
+    const { service, skill } = nextCandidate;
+    const arrival = service.arrival_time
+      ? (service.arrival_time as string).slice(0, 5).replace(':', 'h')
+      : (service.start_time ?? '').slice(0, 5).replace(':', 'h');
+    const teammates = ctx.assignments
+      .filter(
+        o => o.service_id === service.id && o.status === 'present' && o.profile_id !== profileId && o.profile_id,
+      )
+      .map(o => ctx.profiles.find(p => p.id === o.profile_id))
+      .filter((p): p is NonNullable<typeof p> => Boolean(p))
+      .map(p => ({ initials: p.initials, color: p.avatar_color ?? '#96D8D0', name: p.display_name }));
+    nextEvent = {
+      countdownLabel: formatCountdownFr(service.service_date, now),
+      skillBadge: skill?.name ?? '',
+      title: capitalize(formatDateLabel(service.service_date)),
+      details: [arrival ? `Arrivée ${arrival}` : '', service.location].filter(Boolean).join(' · '),
+      teammates,
+      theme: service.spiritual_theme ? `Thème · ${service.spiritual_theme}` : '',
+      heroIcon: 'headphones',
+      heroColor: skill?.color ?? '#96D8D0',
+      arrivalTime: arrival,
+      location: service.location ?? '',
+      dateISO: service.service_date,
+    };
+  }
+
+  return {
+    profile: { id: profileId, name, initials, avatarColor, subtitle },
+    validation,
+    weeklyThought,
+    calendar,
+    nextEvent,
+    appreciation: null,
   };
 }
 

@@ -27,7 +27,7 @@ export type DashboardData = {
     label: string;
     verse: string;
     reference: string;
-  };
+  } | null;
   calendar: {
     monthLabel: string;
     weekdays: string[];
@@ -46,13 +46,13 @@ export type DashboardData = {
     arrivalTime: string;
     location: string;
     dateISO: string;
-  };
+  } | null;
   appreciation: {
     message: string;
     author: string;
     timeAgo: string;
     avatar: { initials: string; color: string };
-  };
+  } | null;
 };
 
 export const MOCK_NEXT_EVENT_DATE = '2025-06-22T12:00:00Z';

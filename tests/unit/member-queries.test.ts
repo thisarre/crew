@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { createMockSupabaseClient } from '@/lib/supabase/mock';
 import type { SupabaseServerClient } from '@/lib/supabase/server';
-import { loadMemberValidationData } from '@/lib/queries/member';
+import { loadMemberDashboard, loadMemberValidationData } from '@/lib/queries/member';
 import { PROFILE_IDS } from '@/data/seed';
 
 const getClient = () => createMockSupabaseClient() as unknown as SupabaseServerClient;
@@ -70,5 +70,34 @@ describe('loadMemberValidationData', () => {
     });
     expect(data.events.length).toBe(0);
     expect(data.progress.total).toBe(0);
+  });
+});
+
+describe('loadMemberDashboard', () => {
+  it('construit le dashboard depuis la base pour Isaac (mois courant figé en juin 2025)', async () => {
+    const client = getClient();
+    const data = await loadMemberDashboard(client, PROFILE_IDS.isaac);
+
+    expect(data.profile.name).toBe('Isaac');
+    expect(data.profile.id).toBe(PROFILE_IDS.isaac);
+    // La date est figée au 17 juin 2025 via tests/setup.ts.
+    expect(data.calendar.monthLabel).toBe('Juin 2025');
+    // La pensée publiée la plus récente remonte de la table spiritual_content.
+    expect(data.weeklyThought).not.toBeNull();
+    expect(data.weeklyThought?.reference).toBeTruthy();
+    // Isaac a un prochain service (22 juin) → carte non vide.
+    expect(data.nextEvent).not.toBeNull();
+    // Pas de table appréciations chargée → bloc masqué.
+    expect(data.appreciation).toBeNull();
+  });
+
+  it('renvoie des états vides pour un profil inconnu (aucune donnée)', async () => {
+    const client = getClient();
+    const data = await loadMemberDashboard(client, '00000000-0000-4000-8000-000000000099');
+
+    expect(data.profile.name).toBe('Membre');
+    expect(data.nextEvent).toBeNull();
+    // La validation reste proposée (mois non validé pour ce profil).
+    expect(data.validation).not.toBeNull();
   });
 });

@@ -1,0 +1,12 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "20"
+  # Ces variables NEXT_PUBLIC_* sont publiques par conception (injectées dans le bundle client).
+  # On les exclut du scan de secrets Netlify, sinon le build échoue ("secrets found in build output").
+  SECRETS_SCAN_OMIT_KEYS = "NEXT_PUBLIC_SUPABASE_URL,NEXT_PUBLIC_SUPABASE_ANON_KEY,NEXT_PUBLIC_VAPID_PUBLIC_KEY"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"

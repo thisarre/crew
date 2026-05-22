@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 
 import { verifyAdminCode, verifyTeamCode } from '@/lib/auth';
 import { SESSION_COOKIE_NAME, SESSION_COOKIE_OPTIONS, encodeSessionToken } from '@/lib/auth/session';
-import { PROFILES_SEED } from '@/data/seed';
+import { createClient } from '@/lib/supabase/server';
+import { fetchProfileById } from '@/lib/queries/admin';
 
 export async function POST(request: Request) {
   const { code, profile_id: profileId, is_admin: isAdmin } = await request.json();
@@ -11,9 +12,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: 'missing_params' }, { status: 400 });
   }
 
-  const profile = PROFILES_SEED.find(profile => profile.id === profileId);
+  const profile = await fetchProfileById(createClient(), profileId);
   if (!profile) {
     return NextResponse.json({ ok: false, error: 'profile_not_found' }, { status: 404 });
+  }
+  if (!(profile.is_active ?? true)) {
+    return NextResponse.json({ ok: false, error: 'profile_inactive' }, { status: 403 });
   }
 
   const respondWithSession = (redirect: string, asAdmin: boolean) => {

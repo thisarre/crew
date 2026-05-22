@@ -59,7 +59,7 @@ export function InstallPrompt() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
           transition={{ duration: 0.35, ease: EASE_PREMIUM }}
-          className="pointer-events-none fixed inset-x-0 bottom-[200px] z-40 flex justify-center px-5"
+          className="pointer-events-none fixed inset-x-0 bottom-[120px] z-40 flex justify-center px-5"
         >
           <div className="pointer-events-auto flex w-full max-w-[400px] items-center gap-3 rounded-[18px] bg-ink p-3.5 shadow-[0_20px_40px_rgba(22,22,27,0.25)]">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-sage)]">

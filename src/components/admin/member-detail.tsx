@@ -8,6 +8,18 @@ import { motion } from 'framer-motion';
 import { IconArrowLeft, IconCalendar, IconPlus, IconTrash } from '@tabler/icons-react';
 
 import type { MemberDetailData } from '@/lib/queries/admin';
+import { ConfirmDialog } from '@/components/shared/confirm-dialog';
+
+/** Traduit les codes d'erreur de l'API en messages lisibles. */
+const DELETE_ERROR_LABELS: Record<string, string> = {
+  cannot_delete_self: 'Tu ne peux pas supprimer ton propre compte.',
+  last_admin: 'Impossible de supprimer le dernier administrateur.',
+  profile_not_found: 'Ce membre n’existe plus.',
+  forbidden: 'Action réservée aux administrateurs.',
+  unauthenticated: 'Session expirée, reconnecte-toi.',
+};
+const labelForDeleteError = (code: string): string =>
+  DELETE_ERROR_LABELS[code] ?? 'La suppression a échoué. Réessaie.';
 
 const EASE_PREMIUM = [0.16, 1, 0.3, 1] as const;
 
@@ -33,13 +45,19 @@ const STATUS_LABELS: Record<MemberDetailData['statusBadge'], { text: string; cla
 export type MemberDetailProps = {
   data: MemberDetailData;
   allSkills: { id: string; name: string }[];
+  currentProfileId?: string | null;
 };
 
-export function MemberDetail({ data, allSkills }: MemberDetailProps) {
+export function MemberDetail({ data, allSkills, currentProfileId }: MemberDetailProps) {
   const router = useRouter();
   const status = STATUS_LABELS[data.statusBadge];
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const isSelf = currentProfileId != null && currentProfileId === data.profile.id;
 
   const heldSkillIds = new Set(data.skills.map(s => s.skillId));
   const missingSkills = allSkills.filter(s => !heldSkillIds.has(s.id));
@@ -83,6 +101,26 @@ export function MemberDetail({ data, allSkills }: MemberDetailProps) {
       setError(err instanceof Error ? err.message : 'unknown_error');
     } finally {
       setBusy(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (deleting) return;
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      const res = await fetch(`/api/team/${data.profile.id}`, {
+        method: 'DELETE',
+        credentials: 'same-origin',
+      });
+      const body = await res.json().catch(() => ({ ok: false, error: `HTTP ${res.status}` }));
+      if (!res.ok || !body.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
+      // Succès : on retourne à la liste d'équipe.
+      router.push('/admin/team' as Route);
+      router.refresh();
+    } catch (err) {
+      setDeleteError(labelForDeleteError(err instanceof Error ? err.message : 'unknown_error'));
+      setDeleting(false);
     }
   };
 
@@ -259,6 +297,39 @@ export function MemberDetail({ data, allSkills }: MemberDetailProps) {
           Un membre désactivé n&apos;apparaît plus dans les propositions ni les statistiques.
         </p>
       </motion.section>
+
+      {!isSelf && (
+        <motion.section variants={fadeUp} className="pt-1">
+          <button
+            type="button"
+            onClick={() => {
+              setDeleteError(null);
+              setConfirmDeleteOpen(true);
+            }}
+            disabled={busy || deleting}
+            className="flex w-full items-center justify-center gap-2 rounded-full border border-[var(--color-border)] bg-transparent py-3 text-[13px] font-semibold text-[var(--color-error-fg)] transition active:scale-[0.99] disabled:opacity-50"
+          >
+            <IconTrash size={16} stroke={2} />
+            Supprimer définitivement
+          </button>
+          <p className="mt-2 text-center text-[10px] text-[var(--color-text-muted)]">
+            Efface le membre et tout son historique. Action irréversible — préfère « Désactiver » pour un départ temporaire.
+          </p>
+        </motion.section>
+      )}
+
+      <ConfirmDialog
+        open={confirmDeleteOpen}
+        tone="danger"
+        title={`Supprimer ${data.profile.display_name} ?`}
+        message="Le membre et tout son historique (affectations, compétences, validations) seront définitivement effacés. Cette action est irréversible."
+        confirmLabel="Supprimer"
+        cancelLabel="Annuler"
+        busy={deleting}
+        error={deleteError}
+        onConfirm={handleDelete}
+        onCancel={() => !deleting && setConfirmDeleteOpen(false)}
+      />
     </motion.div>
   );
 }
