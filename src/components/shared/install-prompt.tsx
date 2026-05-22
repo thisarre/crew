@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { IconDownload, IconX } from '@tabler/icons-react';
+import { IconDownload, IconShare, IconX } from '@tabler/icons-react';
 
 const EASE_PREMIUM = [0.16, 1, 0.3, 1] as const;
 const DISMISS_KEY = 'crew-install-prompt-dismissed';
@@ -12,18 +12,37 @@ type BeforeInstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 };
 
+function isIos() {
+  return /iphone|ipad|ipod/i.test(navigator.userAgent);
+}
+
+function isInStandaloneMode() {
+  return (
+    'standalone' in window.navigator &&
+    (window.navigator as Navigator & { standalone: boolean }).standalone === true
+  );
+}
+
 /**
  * Bandeau discret en bas d'écran qui propose d'installer la PWA.
- * Apparaît quand le navigateur déclenche 'beforeinstallprompt' (Chrome/Edge sur desktop & Android).
- * Sur iOS, ce hook ne se déclenche pas — l'utilisateur passe par "Ajouter à l'écran d'accueil".
+ * - Android/Chrome : utilise beforeinstallprompt pour un bouton natif.
+ * - iOS/Safari : affiche des instructions "Partager → Ajouter à l'écran d'accueil".
  */
 export function InstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [visible, setVisible] = useState(false);
+  const [isIosSafari, setIsIosSafari] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
     if (window.localStorage.getItem(DISMISS_KEY)) return;
+    if (isInStandaloneMode()) return; // déjà installée
+
+    if (isIos()) {
+      setIsIosSafari(true);
+      setVisible(true);
+      return;
+    }
 
     const handler = (event: Event) => {
       event.preventDefault();
@@ -63,19 +82,27 @@ export function InstallPrompt() {
         >
           <div className="pointer-events-auto flex w-full max-w-[400px] items-center gap-3 rounded-[18px] bg-ink p-3.5 shadow-[0_20px_40px_rgba(22,22,27,0.25)]">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--color-sage)]">
-              <IconDownload size={18} stroke={2} className="text-ink" />
+              {isIosSafari
+                ? <IconShare size={18} stroke={2} className="text-ink" />
+                : <IconDownload size={18} stroke={2} className="text-ink" />
+              }
             </div>
             <div className="flex-1">
               <p className="text-[13px] font-bold text-white">Installer Crew</p>
-              <p className="text-[11px] text-white/60">Accès rapide, mode hors ligne</p>
+              {isIosSafari
+                ? <p className="text-[11px] text-white/60">Appuie sur <IconShare size={11} className="inline -mt-0.5" /> puis &laquo;&nbsp;Sur l&rsquo;écran d&rsquo;accueil&nbsp;&raquo;</p>
+                : <p className="text-[11px] text-white/60">Accès rapide, mode hors ligne</p>
+              }
             </div>
-            <button
-              type="button"
-              onClick={handleInstall}
-              className="rounded-full bg-[var(--color-sage)] px-3 py-1.5 text-[11px] font-bold text-ink active:scale-95"
-            >
-              Installer
-            </button>
+            {!isIosSafari && (
+              <button
+                type="button"
+                onClick={handleInstall}
+                className="rounded-full bg-[var(--color-sage)] px-3 py-1.5 text-[11px] font-bold text-ink active:scale-95"
+              >
+                Installer
+              </button>
+            )}
             <button
               type="button"
               onClick={handleDismiss}
