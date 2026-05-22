@@ -35,14 +35,12 @@ const SKILLS = [
   { id: 'diffusion', skillId: 'cd34ef56-7890-ab12-cd34-ef567890ab12', label: 'Diffusion', color: '#D2B4F1', Icon: IconDeviceTv },
 ] as const;
 
-// Helpers pour générer les dimanches du prochain mois
-const TODAY = new Date();
-
-function nextMonthSundays(): { date: string; iso: string; day: number; included: boolean }[] {
-  const ref = new Date(TODAY);
-  ref.setUTCMonth(ref.getUTCMonth() + 1);
+// Helpers pour générer les dimanches d'un mois donné
+function getSundays(offset: number): { date: string; iso: string; day: number; included: boolean }[] {
+  const ref = new Date();
+  ref.setUTCMonth(ref.getUTCMonth() + offset);
   const year = ref.getUTCFullYear();
-  const month = ref.getUTCMonth(); // 0-indexed
+  const month = ref.getUTCMonth();
 
   const sundays: { date: string; iso: string; day: number; included: boolean }[] = [];
   const cursor = new Date(Date.UTC(year, month, 1));
@@ -60,20 +58,25 @@ function nextMonthSundays(): { date: string; iso: string; day: number; included:
   return sundays;
 }
 
-const MONTH_LABEL_NEXT = (() => {
-  const ref = new Date(TODAY);
-  ref.setUTCMonth(ref.getUTCMonth() + 1);
+function getMonthLabel(offset: number): string {
+  const ref = new Date();
+  ref.setUTCMonth(ref.getUTCMonth() + offset);
   return ref.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
-})();
+}
 
 export function ServiceNew() {
   const router = useRouter();
   const [type, setType] = useState<EventType>('sunday');
-  const [sundays, setSundays] = useState(() => nextMonthSundays());
+  const [monthOffset, setMonthOffset] = useState(0);
+  const [sundays, setSundays] = useState(() => getSundays(0));
   const [start, setStart] = useState('14h00');
   const [arrival, setArrival] = useState('13h30');
   const [duration, setDuration] = useState('45 min');
   const [activeSkills, setActiveSkills] = useState<Set<string>>(new Set(['sono', 'camera', 'diffusion']));
+
+  useEffect(() => {
+    setSundays(getSundays(monthOffset));
+  }, [monthOffset]);
 
   const includedSundays = useMemo(() => sundays.filter(s => s.included), [sundays]);
 
@@ -233,8 +236,24 @@ export function ServiceNew() {
               <IconCalendarEvent size={10} stroke={2} className="text-[var(--color-sage)]" />
             </div>
             <p className="text-[10px] font-bold uppercase tracking-[0.4px] text-ink">
-              Série · {MONTH_LABEL_NEXT}
+              Série
             </p>
+            <div className="flex items-center gap-1 rounded-full bg-ink/10 p-0.5">
+              <button
+                type="button"
+                onClick={() => setMonthOffset(0)}
+                className={`rounded-full px-2 py-0.5 text-[9px] font-bold transition ${monthOffset === 0 ? 'bg-ink text-white' : 'text-ink'}`}
+              >
+                {getMonthLabel(0).split(' ')[0]}
+              </button>
+              <button
+                type="button"
+                onClick={() => setMonthOffset(1)}
+                className={`rounded-full px-2 py-0.5 text-[9px] font-bold transition ${monthOffset === 1 ? 'bg-ink text-white' : 'text-ink'}`}
+              >
+                {getMonthLabel(1).split(' ')[0]}
+              </button>
+            </div>
             <span className="ml-auto text-[11px] font-bold text-ink">
               {includedSundays.length} dimanche{includedSundays.length > 1 ? 's' : ''}
             </span>
@@ -354,7 +373,7 @@ export function ServiceNew() {
                     return (
                       <div key={team.date} className="rounded-[10px] bg-[var(--color-bg)] px-2.5 py-2">
                         <p className="text-[11px] font-bold text-ink">
-                          Dim {day} {MONTH_LABEL_NEXT.split(' ')[0]}
+                          Dim {day} {getMonthLabel(monthOffset).split(' ')[0]}
                         </p>
                         <p className="mt-0.5 text-[10px] text-[var(--color-text-secondary)]">
                           {names.join(' · ')}
