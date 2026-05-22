@@ -35,8 +35,8 @@ const SKILLS = [
   { id: 'diffusion', skillId: 'cd34ef56-7890-ab12-cd34-ef567890ab12', label: 'Diffusion', color: '#D2B4F1', Icon: IconDeviceTv },
 ] as const;
 
-// Helpers pour générer les dimanches du prochain mois (référence: 2025-06-17)
-const TODAY = new Date('2025-06-17');
+// Helpers pour générer les dimanches du prochain mois
+const TODAY = new Date();
 
 function nextMonthSundays(): { date: string; iso: string; day: number; included: boolean }[] {
   const ref = new Date(TODAY);

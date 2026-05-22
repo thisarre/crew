@@ -38,7 +38,7 @@ export type TeamProposalInput = {
 const heuristicPick = (
   input: TeamProposalInput,
 ): TeamProposalEntry[] => {
-  const now = input.referenceDate ?? new Date('2025-06-17T08:00:00Z');
+  const now = input.referenceDate ?? new Date();
   const usageCount = new Map<string, number>();
 
   const skills = input.skillIds
@@ -128,7 +128,7 @@ export async function proposeTeam(input: TeamProposalInput): Promise<TeamProposa
         ].join('\n'),
       },
     ],
-    { temperature: 0.5, maxTokens: 800 },
+    { temperature: 0.5, maxTokens: 2000 },
   );
 
   return teams;
