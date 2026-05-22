@@ -255,13 +255,13 @@ export function ServiceNew() {
                 </button>
               </div>
             ))}
-            <label className="flex cursor-pointer items-center gap-2 rounded-[10px] border border-dashed border-[var(--color-border)] px-3 py-2.5">
+            <div className="relative flex items-center gap-2 rounded-[10px] border border-dashed border-[var(--color-border)] px-3 py-2.5">
               <IconCalendarEvent size={14} stroke={2} className="text-[var(--color-text-secondary)]" />
               <span className="flex-1 text-[12px] font-semibold text-[var(--color-text-secondary)]">Ajouter une date</span>
               <input
                 type="date"
-                className="absolute opacity-0 w-0 h-0"
                 min={new Date().toISOString().slice(0, 10)}
+                className="absolute inset-0 cursor-pointer opacity-0"
                 onChange={e => {
                   const val = e.target.value;
                   if (val && !customDates.includes(val)) {
@@ -270,7 +270,7 @@ export function ServiceNew() {
                   e.target.value = '';
                 }}
               />
-            </label>
+            </div>
           </div>
         </motion.section>
       )}
