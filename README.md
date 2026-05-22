@@ -52,3 +52,4 @@ Pour respecter la spec :
 3. Remplace `public/bible-segond21.json` par l'intégralité (~31k versets).
 
 Les helpers de recherche (Sprint 6) consommeront directement ce fichier statique.
+# crew
