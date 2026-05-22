@@ -255,13 +255,13 @@ export function ServiceNew() {
                 </button>
               </div>
             ))}
-            <div className="relative flex items-center gap-2 rounded-[10px] border border-dashed border-[var(--color-border)] px-3 py-2.5">
+            <label className="flex items-center gap-2 rounded-[10px] border border-dashed border-[var(--color-border)] px-3 py-2.5">
               <IconCalendarEvent size={14} stroke={2} className="text-[var(--color-text-secondary)]" />
-              <span className="flex-1 text-[12px] font-semibold text-[var(--color-text-secondary)]">Ajouter une date</span>
+              <span className="text-[12px] font-semibold text-[var(--color-text-secondary)]">Ajouter une date</span>
               <input
                 type="date"
                 min={new Date().toISOString().slice(0, 10)}
-                className="absolute inset-0 cursor-pointer opacity-0"
+                className="ml-auto w-32 text-[12px] font-semibold text-ink outline-none"
                 onChange={e => {
                   const val = e.target.value;
                   if (val && !customDates.includes(val)) {
@@ -270,7 +270,7 @@ export function ServiceNew() {
                   e.target.value = '';
                 }}
               />
-            </div>
+            </label>
           </div>
         </motion.section>
       )}
@@ -474,7 +474,11 @@ export function ServiceNew() {
           <IconCheck size={14} stroke={2} />
           {submitting
             ? 'Création...'
-            : `Créer ${includedSundays.length > 0 ? `${includedSundays.length} dimanche${includedSundays.length > 1 ? 's' : ''}` : ''}`}
+            : type === 'sunday'
+              ? `Créer ${includedSundays.length} dimanche${includedSundays.length > 1 ? 's' : ''}`
+              : customDates.length > 0
+                ? `Créer ${customDates.length} événement${customDates.length > 1 ? 's' : ''}`
+                : 'Créer'}
         </button>
       </motion.section>
     </motion.div>
