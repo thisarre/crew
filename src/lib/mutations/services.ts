@@ -35,7 +35,7 @@ export async function createService(
   const orgId = input.organizationId ?? ORG_ID;
 
   // 1. Insert du service
-  const servicePayload: ServiceInsert = {
+  const servicePayload: Omit<ServiceInsert, 'start_time'> & { start_time: string | null } = {
     organization_id: orgId,
     event_type: input.eventType,
     title: input.eventType === 'sunday_service' ? 'Culte dimanche' : input.eventType === 'midweek_service' ? 'Service de semaine' : 'Call équipe',
