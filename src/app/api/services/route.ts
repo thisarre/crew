@@ -18,7 +18,7 @@ const Body = z.object({
   arrivalTime: z.string().optional(),
   location: z.string().optional(),
   spiritualTheme: z.string().optional(),
-  slotSkillIds: z.array(z.string().uuid()).min(1),
+  slotSkillIds: z.array(z.string().uuid()),
   initialAssignmentsByDate: z.record(z.array(AssignmentSchema)).optional(),
 });
 

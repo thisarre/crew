@@ -55,16 +55,15 @@ export async function createService(
     .single();
   if (serviceErr || !service) throw serviceErr ?? new Error('service_insert_failed');
 
-  // 2. Insert des slots
+  // 2. Insert des slots (optionnel — pas de slots pour les événements sans postes)
   const slotsPayload: SlotInsert[] = input.slotSkillIds.map(skillId => ({
     service_id: service.id,
     skill_id: skillId,
     positions_required: 1,
   }));
-  const { data: slots, error: slotsErr } = await client
-    .from('service_slots')
-    .insert(slotsPayload)
-    .select();
+  const { data: slots, error: slotsErr } = slotsPayload.length > 0
+    ? await client.from('service_slots').insert(slotsPayload).select()
+    : { data: [], error: null };
   if (slotsErr) throw slotsErr;
 
   // 3. Insert des assignations initiales (si IA propose-team a déjà choisi)

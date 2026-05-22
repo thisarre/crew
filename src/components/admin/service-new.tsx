@@ -72,6 +72,7 @@ export function ServiceNew() {
   const [start, setStart] = useState('14h00');
   const [arrival, setArrival] = useState('13h30');
   const [duration, setDuration] = useState('45 min');
+  const [customDates, setCustomDates] = useState<string[]>([]); // pour midweek/call
   const [activeSkills, setActiveSkills] = useState<Set<string>>(new Set(['sono', 'camera', 'diffusion']));
 
   useEffect(() => {
@@ -166,7 +167,7 @@ export function ServiceNew() {
         }
       }
 
-      const dates = type === 'sunday' ? includedSundays.map(s => s.iso) : [];
+      const dates = type === 'sunday' ? includedSundays.map(s => s.iso) : customDates;
       if (dates.length === 0) {
         throw new Error('Sélectionne au moins une date');
       }
@@ -180,7 +181,7 @@ export function ServiceNew() {
           startTime: type === 'call' ? start : undefined,
           arrivalTime: type !== 'call' ? arrival : undefined,
           location: type === 'call' ? duration : undefined,
-          slotSkillIds: skillIdsActive,
+          slotSkillIds: type === 'sunday' ? skillIdsActive : [],
           initialAssignmentsByDate: withTeam ? initialAssignmentsByDate : undefined,
         }),
       });
@@ -227,6 +228,52 @@ export function ServiceNew() {
           <TypeChoice id="call" label="Call" Icon={IconUsers} color="#D2B4F1" active={type === 'call'} onClick={setType} />
         </div>
       </motion.section>
+
+      {/* Sélecteur de dates libres (midweek / call) */}
+      {type !== 'sunday' && (
+        <motion.section variants={fadeUp} className="rounded-2xl bg-white px-3.5 py-3">
+          <div className="mb-2 flex items-center gap-1.5">
+            <div className="flex h-4 w-4 items-center justify-center rounded-full bg-ink">
+              <IconCalendarEvent size={10} stroke={2} className="text-white" />
+            </div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.4px] text-ink">
+              {customDates.length > 0 ? `${customDates.length} date${customDates.length > 1 ? 's' : ''}` : 'Date(s)'}
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            {customDates.map(d => (
+              <div key={d} className="flex items-center gap-2 rounded-[10px] bg-[var(--color-bg)] px-3 py-2">
+                <span className="flex-1 text-[13px] font-bold text-ink">
+                  {new Date(d + 'T00:00:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'long' })}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setCustomDates(prev => prev.filter(x => x !== d))}
+                  className="flex h-6 w-6 items-center justify-center rounded-full bg-white"
+                >
+                  <IconX size={11} stroke={2} className="text-[var(--color-text-secondary)]" />
+                </button>
+              </div>
+            ))}
+            <label className="flex cursor-pointer items-center gap-2 rounded-[10px] border border-dashed border-[var(--color-border)] px-3 py-2.5">
+              <IconCalendarEvent size={14} stroke={2} className="text-[var(--color-text-secondary)]" />
+              <span className="flex-1 text-[12px] font-semibold text-[var(--color-text-secondary)]">Ajouter une date</span>
+              <input
+                type="date"
+                className="absolute opacity-0 w-0 h-0"
+                min={new Date().toISOString().slice(0, 10)}
+                onChange={e => {
+                  const val = e.target.value;
+                  if (val && !customDates.includes(val)) {
+                    setCustomDates(prev => [...prev, val].sort());
+                  }
+                  e.target.value = '';
+                }}
+              />
+            </label>
+          </div>
+        </motion.section>
+      )}
 
       {/* Série dimanches (si sunday) */}
       {type === 'sunday' && (
