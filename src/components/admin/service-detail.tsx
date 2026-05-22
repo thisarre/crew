@@ -301,18 +301,27 @@ function SlotCard({ slot, serviceId }: { slot: ServiceSlotDetail; serviceId: str
     setAssignError(null);
     setAssigning(true);
     try {
-      const res = await fetch('/api/assignments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'same-origin',
-        body: JSON.stringify({
-          serviceId,
-          slotId: slot.slotId,
-          profileId: slot.aiProposal.profileId,
-        }),
-      });
-      const body = await res.json().catch(() => ({ ok: false, error: `HTTP ${res.status}` }));
-      if (!res.ok || !body.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
+      const postAssignment = async (profileId: string, isTrainee: boolean) => {
+        const res = await fetch('/api/assignments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ serviceId, slotId: slot.slotId, profileId, isTrainee }),
+        });
+        const body = await res.json().catch(() => ({ ok: false, error: `HTTP ${res.status}` }));
+        if (!res.ok || !body.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
+      };
+
+      if (slot.aiProposal.isTrainee) {
+        // Apprenti en premier (isTrainee: true), puis binôme autonome si ce n'est pas l'admin
+        await postAssignment(slot.aiProposal.profileId, true);
+        if (slot.aiProposal.binome && slot.aiProposal.binome !== 'admin') {
+          await postAssignment(slot.aiProposal.binome.profileId, false);
+        }
+      } else {
+        await postAssignment(slot.aiProposal.profileId, false);
+      }
+
       router.refresh();
     } catch (err) {
       setAssignError(err instanceof Error ? err.message : 'unknown_error');
@@ -442,24 +451,45 @@ function SlotCard({ slot, serviceId }: { slot: ServiceSlotDetail; serviceId: str
               </div>
               <p className="text-[10px] font-bold uppercase tracking-[0.4px] text-ink">Proposition</p>
             </div>
-            <div className="flex items-center gap-3">
-              <div
-                className="flex h-11 w-11 items-center justify-center rounded-full text-[14px] font-bold text-ink"
-                style={{ backgroundColor: slot.aiProposal.avatarColor }}
-              >
-                {slot.aiProposal.initials}
-              </div>
-              <div className="flex-1">
-                <p className="text-[14px] font-bold text-ink">{slot.aiProposal.name}</p>
-                <div className="mt-1 flex items-center gap-1.5">
-                  <span className="rounded-full bg-[var(--color-sage)] px-1.5 py-0.5 text-[9px] font-bold text-ink">
-                    {slot.aiProposal.level === 'trainer' ? 'Formateur' : 'Autonome'}
-                  </span>
-                  <span className="text-[11px] font-medium capitalize text-ink">
-                    {slot.aiProposal.availabilityLabel}
-                  </span>
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <div
+                  className="flex h-11 w-11 items-center justify-center rounded-full text-[14px] font-bold text-ink"
+                  style={{ backgroundColor: slot.aiProposal.avatarColor }}
+                >
+                  {slot.aiProposal.initials}
+                </div>
+                <div className="flex-1">
+                  <p className="text-[14px] font-bold text-ink">{slot.aiProposal.name}</p>
+                  <div className="mt-1 flex items-center gap-1.5">
+                    <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${slot.aiProposal.isTrainee ? 'bg-[var(--color-warning-bg)] text-[var(--color-warning-fg)]' : 'bg-[var(--color-sage)] text-ink'}`}>
+                      {slot.aiProposal.level === 'trainer' ? 'Formateur' : slot.aiProposal.level === 'learning' ? 'Apprenti' : 'Autonome'}
+                    </span>
+                    <span className="text-[11px] font-medium capitalize text-ink">
+                      {slot.aiProposal.availabilityLabel}
+                    </span>
+                  </div>
                 </div>
               </div>
+
+              {slot.aiProposal.binome && (
+                <div className="flex items-center gap-2.5 rounded-[12px] bg-[var(--color-bg)] px-3 py-2">
+                  <span className="text-[10px] font-bold text-[var(--color-text-secondary)]">Binôme</span>
+                  {slot.aiProposal.binome === 'admin' ? (
+                    <span className="text-[12px] font-bold text-ink">Vous-même</span>
+                  ) : (
+                    <>
+                      <div
+                        className="flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-bold text-ink"
+                        style={{ backgroundColor: slot.aiProposal.binome.avatarColor }}
+                      >
+                        {slot.aiProposal.binome.initials}
+                      </div>
+                      <span className="text-[12px] font-bold text-ink">{slot.aiProposal.binome.name}</span>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
             <p className="mt-2.5 text-[11px] italic leading-relaxed text-[var(--color-text-secondary)]">
               {slot.aiProposal.reason}
@@ -477,7 +507,11 @@ function SlotCard({ slot, serviceId }: { slot: ServiceSlotDetail; serviceId: str
                 className="flex w-full items-center justify-center gap-1.5 rounded-full bg-ink py-2.5 text-[12px] font-bold text-white active:scale-[0.97] disabled:opacity-60"
               >
                 <IconCheck size={14} stroke={2} />
-                {assigning ? 'Assignation...' : "L'assigner"}
+                {assigning
+                  ? 'Assignation...'
+                  : slot.aiProposal.isTrainee && slot.aiProposal.binome && slot.aiProposal.binome !== 'admin'
+                    ? 'Assigner le binôme'
+                    : "L'assigner"}
               </button>
             </div>
           </div>

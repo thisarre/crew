@@ -553,6 +553,8 @@ export type ServiceSlotDetail = {
     weeksSinceServed: number;
     availabilityLabel: string;
     reason: string;
+    isTrainee: boolean;
+    binome?: { profileId: string; name: string; initials: string; avatarColor: string } | 'admin';
   } | null;
 };
 
@@ -636,13 +638,13 @@ export const buildServiceDetail = (
       const cancelledProfileIds = new Set(cancelledAssignments.map(a => a.profile_id));
 
       const candidates = ctx.memberSkills.filter(
-        ms => ms.skill_id === skill.id && ms.level !== 'learning' && !occupiedProfileIds.has(ms.profile_id) && !cancelledProfileIds.has(ms.profile_id),
+        ms => ms.skill_id === skill.id && !occupiedProfileIds.has(ms.profile_id) && !cancelledProfileIds.has(ms.profile_id),
       );
 
       const ranked = candidates
         .map(candidate => {
           const profile = ctx.profiles.find(p => p.id === candidate.profile_id);
-          if (!profile || profile.role !== 'member') return null;
+          if (!profile || profile.role !== 'member' || !(profile.is_active ?? true)) return null;
           // Exclure ceux déjà sur ce service
           if (serviceAssignments.some(a => a.profile_id === profile.id && a.status === 'present')) return null;
           const lastServed = ctx.assignments
@@ -656,17 +658,40 @@ export const buildServiceDetail = (
           return { profile, candidate, weeksSince };
         })
         .filter((x): x is NonNullable<typeof x> => Boolean(x))
-        .sort((a, b) => b.weeksSince - a.weeksSince);
+        .sort((a, b) => {
+          // Autonomes/formateurs en premier, apprentis en dernier
+          const aLearner = a.candidate.level === 'learning' ? 1 : 0;
+          const bLearner = b.candidate.level === 'learning' ? 1 : 0;
+          if (aLearner !== bLearner) return aLearner - bLearner;
+          return b.weeksSince - a.weeksSince;
+        });
 
       const top = ranked[0];
       if (top) {
+        const isTrainee = top.candidate.level === 'learning';
         const availability = describeWeeksSinceServed(top.weeksSince);
-        const reason =
-          top.weeksSince <= 0
+
+        // Si apprenti → trouver un binôme autonome libre sur ce service
+        let binome: { profileId: string; name: string; initials: string; avatarColor: string } | 'admin' | undefined = undefined;
+        if (isTrainee) {
+          const binomeProfile = ctx.memberSkills
+            .filter(ms => ms.skill_id === skill.id && ms.level !== 'learning' && ms.profile_id !== top.profile.id)
+            .map(ms => ctx.profiles.find(p => p.id === ms.profile_id))
+            .find(p => p && p.role === 'member' && (p.is_active ?? true)
+              && !serviceAssignments.some(a => a.profile_id === p.id && a.status === 'present'));
+          binome = binomeProfile
+            ? { profileId: binomeProfile.id, name: binomeProfile.display_name, initials: binomeProfile.initials, avatarColor: binomeProfile.avatar_color ?? '#96D8D0' }
+            : 'admin';
+        }
+
+        const reason = isTrainee
+          ? `En apprentissage sur ${skill.name.toLowerCase()} — à encadrer en binôme.`
+          : top.weeksSince <= 0
             ? `Maîtrise ${skill.name.toLowerCase()} et reste disponible. Un choix sûr pour ce poste.`
             : top.weeksSince >= 50
               ? `Maîtrise ${skill.name.toLowerCase()} et n'a pas encore servi. L'occasion de l'intégrer.`
               : `Maîtrise ${skill.name.toLowerCase()} et ${availability}. L'occasion de la/le réinviter.`;
+
         aiProposal = {
           profileId: top.profile.id,
           name: top.profile.display_name,
@@ -676,6 +701,8 @@ export const buildServiceDetail = (
           weeksSinceServed: top.weeksSince,
           availabilityLabel: availability,
           reason,
+          isTrainee,
+          binome,
         };
       }
     }
