@@ -291,7 +291,13 @@ function SlotCard({ slot, serviceId }: { slot: ServiceSlotDetail; serviceId: str
   const router = useRouter();
   const [assigning, setAssigning] = useState(false);
   const [assignError, setAssignError] = useState<string | null>(null);
+  const [manualMode, setManualMode] = useState(false);
+  const [primaryId, setPrimaryId] = useState<string | null>(null);
+  const [binomeId, setBinomeId] = useState<string | 'admin' | null>(null);
   const isOpen = slot.status === 'open';
+
+  const primaryCandidate = slot.candidates.find(c => c.profileId === primaryId);
+  const binomeCandidates = slot.candidates.filter(c => c.profileId !== primaryId);
   const cardClass = isOpen
     ? 'rounded-[22px] border-[1.5px] border-[var(--color-error-fg)] bg-white p-5'
     : 'rounded-[22px] bg-white p-5';
@@ -322,6 +328,39 @@ function SlotCard({ slot, serviceId }: { slot: ServiceSlotDetail; serviceId: str
         await postAssignment(slot.aiProposal.profileId, false);
       }
 
+      router.refresh();
+    } catch (err) {
+      setAssignError(err instanceof Error ? err.message : 'unknown_error');
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  const handleManualAssign = async () => {
+    if (!primaryId || assigning) return;
+    setAssignError(null);
+    setAssigning(true);
+    try {
+      const postAssignment = async (profileId: string, isTrainee: boolean) => {
+        const res = await fetch('/api/assignments', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ serviceId, slotId: slot.slotId, profileId, isTrainee }),
+        });
+        const body = await res.json().catch(() => ({ ok: false, error: `HTTP ${res.status}` }));
+        if (!res.ok || !body.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
+      };
+
+      const isLearner = primaryCandidate?.level === 'learning';
+      await postAssignment(primaryId, isLearner ?? false);
+      if (binomeId && binomeId !== 'admin') {
+        await postAssignment(binomeId, false);
+      }
+
+      setManualMode(false);
+      setPrimaryId(null);
+      setBinomeId(null);
       router.refresh();
     } catch (err) {
       setAssignError(err instanceof Error ? err.message : 'unknown_error');
@@ -515,6 +554,126 @@ function SlotCard({ slot, serviceId }: { slot: ServiceSlotDetail; serviceId: str
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Sélecteur manuel */}
+      {!manualMode && slot.candidates.length > 0 && (
+        <button
+          type="button"
+          onClick={() => { setManualMode(true); setPrimaryId(null); setBinomeId(null); }}
+          className="mt-3 w-full rounded-2xl border border-dashed border-[var(--color-border)] py-2.5 text-[11px] font-bold text-[var(--color-text-secondary)] transition active:scale-[0.98]"
+        >
+          Choisir manuellement →
+        </button>
+      )}
+
+      {manualMode && (
+        <div className="mt-3 space-y-3 rounded-2xl border border-[var(--color-border)] p-3.5">
+          <div className="flex items-center justify-between">
+            <p className="text-[11px] font-bold uppercase tracking-[0.4px] text-ink">Sélection manuelle</p>
+            <button
+              type="button"
+              onClick={() => { setManualMode(false); setPrimaryId(null); setBinomeId(null); }}
+              className="flex h-6 w-6 items-center justify-center rounded-full bg-[var(--color-bg)]"
+            >
+              <IconX size={12} stroke={2} className="text-ink" />
+            </button>
+          </div>
+
+          {/* Choix du titulaire */}
+          <div>
+            <p className="mb-1.5 text-[10px] font-semibold text-[var(--color-text-secondary)]">Titulaire</p>
+            <div className="space-y-1.5">
+              {slot.candidates.map(c => (
+                <button
+                  key={c.profileId}
+                  type="button"
+                  onClick={() => { setPrimaryId(c.profileId); setBinomeId(null); }}
+                  className={`flex w-full items-center gap-2.5 rounded-[12px] px-3 py-2 text-left transition ${primaryId === c.profileId ? 'bg-ink' : 'bg-[var(--color-bg)]'}`}
+                >
+                  <div
+                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[12px] font-bold text-ink"
+                    style={{ backgroundColor: primaryId === c.profileId ? 'var(--color-sage)' : c.avatarColor }}
+                  >
+                    {c.initials}
+                  </div>
+                  <p className={`flex-1 text-[12px] font-bold ${primaryId === c.profileId ? 'text-white' : 'text-ink'}`}>{c.name}</p>
+                  <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
+                    c.level === 'learning'
+                      ? 'bg-[var(--color-warning-bg)] text-[var(--color-warning-fg)]'
+                      : primaryId === c.profileId ? 'bg-[var(--color-sage)] text-ink' : 'bg-white text-ink'
+                  }`}>
+                    {c.level === 'trainer' ? 'Formateur' : c.level === 'learning' ? 'Apprenti' : 'Autonome'}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Choix du binôme (optionnel) */}
+          {primaryId && (
+            <div>
+              <p className="mb-1.5 text-[10px] font-semibold text-[var(--color-text-secondary)]">
+                Binôme <span className="font-normal">(optionnel)</span>
+                {primaryCandidate?.level === 'learning' && (
+                  <span className="ml-1.5 rounded-full bg-[var(--color-warning-bg)] px-1.5 py-0.5 text-[9px] font-bold text-[var(--color-warning-fg)]">recommandé</span>
+                )}
+              </p>
+              <div className="space-y-1.5">
+                <button
+                  type="button"
+                  onClick={() => setBinomeId(binomeId === 'admin' ? null : 'admin')}
+                  className={`flex w-full items-center gap-2.5 rounded-[12px] px-3 py-2 text-left transition ${binomeId === 'admin' ? 'bg-ink' : 'bg-[var(--color-bg)]'}`}
+                >
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-sage)] text-[10px] font-bold text-ink">Moi</div>
+                  <p className={`flex-1 text-[12px] font-bold ${binomeId === 'admin' ? 'text-white' : 'text-ink'}`}>Vous-même</p>
+                  {binomeId === 'admin' && <IconCheck size={13} stroke={2.5} className="text-[var(--color-sage)]" />}
+                </button>
+                {binomeCandidates.map(c => (
+                  <button
+                    key={c.profileId}
+                    type="button"
+                    onClick={() => setBinomeId(binomeId === c.profileId ? null : c.profileId)}
+                    className={`flex w-full items-center gap-2.5 rounded-[12px] px-3 py-2 text-left transition ${binomeId === c.profileId ? 'bg-ink' : 'bg-[var(--color-bg)]'}`}
+                  >
+                    <div
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[12px] font-bold text-ink"
+                      style={{ backgroundColor: binomeId === c.profileId ? 'var(--color-sage)' : c.avatarColor }}
+                    >
+                      {c.initials}
+                    </div>
+                    <p className={`flex-1 text-[12px] font-bold ${binomeId === c.profileId ? 'text-white' : 'text-ink'}`}>{c.name}</p>
+                    <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
+                      c.level === 'learning'
+                        ? 'bg-[var(--color-warning-bg)] text-[var(--color-warning-fg)]'
+                        : binomeId === c.profileId ? 'bg-[var(--color-sage)] text-ink' : 'bg-white text-ink'
+                    }`}>
+                      {c.level === 'trainer' ? 'Formateur' : c.level === 'learning' ? 'Apprenti' : 'Autonome'}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {assignError && (
+            <p className="rounded-[10px] bg-[var(--color-error-bg)] p-2 text-[10px] font-medium text-[var(--color-error-fg)]">
+              {assignError}
+            </p>
+          )}
+
+          {primaryId && (
+            <button
+              type="button"
+              onClick={handleManualAssign}
+              disabled={assigning}
+              className="flex w-full items-center justify-center gap-1.5 rounded-full bg-ink py-2.5 text-[12px] font-bold text-white active:scale-[0.97] disabled:opacity-60"
+            >
+              <IconCheck size={14} stroke={2} />
+              {assigning ? 'Assignation...' : binomeId ? 'Assigner le binôme' : "L'assigner"}
+            </button>
+          )}
         </div>
       )}
     </motion.div>

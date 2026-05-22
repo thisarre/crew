@@ -556,6 +556,14 @@ export type ServiceSlotDetail = {
     isTrainee: boolean;
     binome?: { profileId: string; name: string; initials: string; avatarColor: string } | 'admin';
   } | null;
+  candidates: {
+    profileId: string;
+    name: string;
+    initials: string;
+    avatarColor: string;
+    level: MemberSkillRow['level'];
+    weeksSinceServed: number;
+  }[];
 };
 
 /**
@@ -707,6 +715,33 @@ export const buildServiceDetail = (
       }
     }
 
+    // Tous les membres avec ce skill, non encore présents sur ce service — pour la sélection manuelle
+    const candidates: ServiceSlotDetail['candidates'] = skill
+      ? ctx.memberSkills
+          .filter(ms => ms.skill_id === skill.id)
+          .map(ms => {
+            const profile = ctx.profiles.find(p => p.id === ms.profile_id);
+            if (!profile || profile.role !== 'member' || !(profile.is_active ?? true)) return null;
+            if (serviceAssignments.some(a => a.profile_id === profile.id && a.status === 'present')) return null;
+            const lastServed = ctx.assignments
+              .filter(a => a.profile_id === profile.id && a.status === 'present')
+              .map(a => ctx.services.find(s => s.id === a.service_id))
+              .filter((s): s is ServiceRow => Boolean(s))
+              .map(s => new Date(s.service_date).getTime())
+              .filter(t => t <= now.getTime())
+              .sort((x, y) => y - x)[0];
+            const weeksSinceServed = lastServed ? Math.floor((now.getTime() - lastServed) / (1000 * 60 * 60 * 24 * 7)) : 99;
+            return { profileId: profile.id, name: profile.display_name, initials: profile.initials, avatarColor: profile.avatar_color ?? '#96D8D0', level: ms.level, weeksSinceServed };
+          })
+          .filter((c): c is NonNullable<typeof c> => Boolean(c))
+          .sort((a, b) => {
+            const aL = a.level === 'learning' ? 1 : 0;
+            const bL = b.level === 'learning' ? 1 : 0;
+            if (aL !== bL) return aL - bL;
+            return b.weeksSinceServed - a.weeksSinceServed;
+          })
+      : [];
+
     return {
       slotId: slot.id,
       skillId: skill?.id ?? '',
@@ -717,6 +752,7 @@ export const buildServiceDetail = (
       assigned,
       status,
       aiProposal,
+      candidates,
     };
   });
 
