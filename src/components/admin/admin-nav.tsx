@@ -5,13 +5,13 @@ import Link from 'next/link';
 import type { Route } from 'next';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { IconCalendar, IconLayoutGrid, IconSparkles, IconUsers } from '@tabler/icons-react';
+import { IconCalendar, IconCalendarEvent, IconLayoutGrid, IconSparkles, IconUsers } from '@tabler/icons-react';
 import type { IconProps } from '@tabler/icons-react';
 
 const EASE_PREMIUM = [0.16, 1, 0.3, 1] as const;
 
 type AdminNavItem = {
-  id: 'home' | 'services' | 'team' | 'spiritual';
+  id: 'home' | 'services' | 'calendar' | 'team' | 'spiritual';
   label: string;
   href: string;
   icon: ComponentType<IconProps>;
@@ -24,6 +24,7 @@ export function AdminNav() {
     () => [
       { id: 'home', label: 'Console', href: '/admin', icon: IconLayoutGrid },
       { id: 'services', label: 'Services', href: '/admin/services', icon: IconCalendar },
+      { id: 'calendar', label: 'Calendrier', href: '/admin/calendar', icon: IconCalendarEvent },
       { id: 'team', label: 'Équipe', href: '/admin/team', icon: IconUsers },
       { id: 'spiritual', label: 'Spirituel', href: '/admin/spiritual', icon: IconSparkles },
     ],

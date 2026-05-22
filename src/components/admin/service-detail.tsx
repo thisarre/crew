@@ -44,6 +44,10 @@ export function ServiceDetail({ data }: { data: ServiceDetailData }) {
   const [publishError, setPublishError] = useState<string | null>(null);
   const [publishedMessage, setPublishedMessage] = useState<string | null>(null);
   const isAlreadyPublished = data.service.status === 'published' || data.service.status === 'completed';
+  const isCancelled = data.service.status === 'cancelled';
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelMessage, setCancelMessage] = useState<string | null>(null);
+  const [confirmCancel, setConfirmCancel] = useState(false);
 
   const handlePublish = async () => {
     if (publishing) return;
@@ -67,6 +71,38 @@ export function ServiceDetail({ data }: { data: ServiceDetailData }) {
       setPublishError(err instanceof Error ? err.message : 'unknown_error');
     } finally {
       setPublishing(false);
+    }
+  };
+
+  const handleCancelToggle = async (action: 'cancel' | 'reactivate') => {
+    if (cancelling) return;
+    setCancelMessage(null);
+    setCancelling(true);
+    try {
+      const res = await fetch(`/api/services/${data.service.id}/cancel`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ action }),
+      });
+      const body = await res.json().catch(() => ({ ok: false, error: `HTTP ${res.status}` }));
+      if (!res.ok || !body.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
+      if (action === 'reactivate') {
+        setCancelMessage('Service réactivé (remis en brouillon)');
+      } else {
+        const n = typeof body.notified === 'number' ? body.notified : 0;
+        setCancelMessage(
+          n > 0
+            ? `Service annulé — ${n} membre${n > 1 ? 's' : ''} notifié${n > 1 ? 's' : ''}`
+            : 'Service annulé',
+        );
+      }
+      setConfirmCancel(false);
+      router.refresh();
+    } catch (err) {
+      setCancelMessage(err instanceof Error ? err.message : 'unknown_error');
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -180,9 +216,9 @@ export function ServiceDetail({ data }: { data: ServiceDetailData }) {
           <button
             type="button"
             onClick={handlePublish}
-            disabled={!data.isPublishable || publishing || isAlreadyPublished}
+            disabled={!data.isPublishable || publishing || isAlreadyPublished || isCancelled}
             className={`pointer-events-auto flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-[14px] font-bold shadow-[0_8px_24px_rgba(22,22,27,0.15)] transition ${
-              data.isPublishable && !isAlreadyPublished
+              data.isPublishable && !isAlreadyPublished && !isCancelled
                 ? 'bg-ink text-white active:scale-[0.98]'
                 : 'bg-ink text-white opacity-50'
             }`}
@@ -199,6 +235,52 @@ export function ServiceDetail({ data }: { data: ServiceDetailData }) {
               </span>
             )}
           </button>
+
+          {cancelMessage && (
+            <p className="pointer-events-auto rounded-[12px] bg-white px-3 py-2 text-center text-[11px] font-medium text-ink">
+              {cancelMessage}
+            </p>
+          )}
+
+          {isCancelled ? (
+            <button
+              type="button"
+              onClick={() => handleCancelToggle('reactivate')}
+              disabled={cancelling}
+              className="pointer-events-auto flex w-full items-center justify-center gap-2 rounded-full border border-[var(--color-border)] bg-white py-3 text-[13px] font-bold text-ink active:scale-[0.98] disabled:opacity-50"
+            >
+              {cancelling ? 'Réactivation...' : 'Réactiver le service'}
+            </button>
+          ) : confirmCancel ? (
+            <div className="pointer-events-auto flex gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmCancel(false)}
+                disabled={cancelling}
+                className="flex flex-1 items-center justify-center rounded-full border border-[var(--color-border)] bg-white py-3 text-[13px] font-semibold text-ink disabled:opacity-50"
+              >
+                Retour
+              </button>
+              <button
+                type="button"
+                onClick={() => handleCancelToggle('cancel')}
+                disabled={cancelling}
+                className="flex flex-1 items-center justify-center gap-1.5 rounded-full bg-[var(--color-error-fg)] py-3 text-[13px] font-bold text-white active:scale-[0.98] disabled:opacity-50"
+              >
+                <IconAlertCircle size={15} stroke={2} />
+                {cancelling ? 'Annulation...' : "Confirmer l'annulation"}
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setConfirmCancel(true)}
+              disabled={cancelling}
+              className="pointer-events-auto flex w-full items-center justify-center gap-2 rounded-full border border-[var(--color-error-fg)]/40 bg-white py-3 text-[13px] font-bold text-[var(--color-error-fg)] active:scale-[0.98] disabled:opacity-50"
+            >
+              Annuler le service
+            </button>
+          )}
         </div>
       </div>
     </motion.div>

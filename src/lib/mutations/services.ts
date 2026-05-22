@@ -1,6 +1,7 @@
 import type { SupabaseServerClient } from '@/lib/supabase/server';
 import type { Database } from '@/types/database';
 import { ORG_ID } from '@/data/seed';
+import { cancelAssignment } from './assignments';
 
 type ServiceInsert = Database['public']['Tables']['services']['Insert'];
 type SlotInsert = Database['public']['Tables']['service_slots']['Insert'];
@@ -108,4 +109,50 @@ export async function publishService(
     .eq('id', serviceId);
   if (error) throw error;
   return { publishedAt };
+}
+
+/**
+ * Annule un service entier (le culte/la date) — possible à tout moment.
+ * - Passe le service en statut 'cancelled'.
+ * - Annule toutes les assignations 'present' rattachées (les membres sont libérés).
+ * Renvoie le nombre d'assignations annulées (pour info / notification).
+ */
+export async function cancelService(
+  client: SupabaseServerClient,
+  serviceId: string,
+): Promise<{ cancelledAssignments: number }> {
+  const { error: svcErr } = await client
+    .from('services')
+    .update({ status: 'cancelled' })
+    .eq('id', serviceId);
+  if (svcErr) throw svcErr;
+
+  const { data: present, error: fetchErr } = await client
+    .from('assignments')
+    .select('id')
+    .eq('service_id', serviceId)
+    .eq('status', 'present');
+  if (fetchErr) throw fetchErr;
+
+  const ids = (present ?? []).map(a => a.id);
+  for (const id of ids) {
+    await cancelAssignment(client, id, 'Service annulé');
+  }
+
+  return { cancelledAssignments: ids.length };
+}
+
+/**
+ * Réactive un service précédemment annulé : repasse en 'draft'.
+ * Les assignations annulées ne sont pas restaurées automatiquement — l'admin réassigne puis republie.
+ */
+export async function reactivateService(
+  client: SupabaseServerClient,
+  serviceId: string,
+): Promise<void> {
+  const { error } = await client
+    .from('services')
+    .update({ status: 'draft' })
+    .eq('id', serviceId);
+  if (error) throw error;
 }
