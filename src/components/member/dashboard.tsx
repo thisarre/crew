@@ -273,7 +273,7 @@ export function MemberDashboard({ data, nextAssignment = null }: MemberDashboard
             <div>
               <p className="text-[14px] font-medium leading-[1.5] text-ink">{data.appreciation.message}</p>
               <p className="text-[12px] text-[var(--color-text-muted)]">
-                {data.appreciation.author} · {data.appreciation.timeAgo}
+                {data.appreciation.author}{data.appreciation.timeAgo ? ` · ${data.appreciation.timeAgo}` : ''}
               </p>
             </div>
           </div>

@@ -7,7 +7,7 @@
  *  - Push notifications → affiche une notif avec deep-link
  */
 
-const VERSION = 'crew-v2';
+const VERSION = 'crew-v3';
 const STATIC_CACHE = `${VERSION}-static`;
 const PAGES_CACHE = `${VERSION}-pages`;
 const OFFLINE_URL = '/offline.html';
@@ -80,6 +80,13 @@ self.addEventListener('fetch', event => {
     event.respondWith(
       fetch(request).catch(() => caches.match(OFFLINE_URL)),
     );
+  }
+});
+
+// Message handler (future-proofing for controlled skipWaiting)
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
   }
 });
 

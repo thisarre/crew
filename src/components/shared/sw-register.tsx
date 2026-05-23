@@ -12,9 +12,37 @@ export function ServiceWorkerRegister() {
     if (!('serviceWorker' in navigator)) return;
     if (process.env.NODE_ENV !== 'production') return;
 
+    let refreshing = false;
+
+    // Reload once when a new SW takes control (after skipWaiting)
+    const onControllerChange = () => {
+      if (refreshing) return;
+      refreshing = true;
+      window.location.reload();
+    };
+
+    navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
+
     const register = async () => {
       try {
-        await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+        const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+
+        // Listen for new SW arriving
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          if (!newWorker) return;
+          newWorker.addEventListener('statechange', () => {
+            // When the new SW is activated and a controller already exists,
+            // controllerchange will fire and trigger the reload above.
+          });
+        });
+
+        // Poll for updates every 60 seconds
+        const interval = setInterval(() => {
+          registration.update().catch(() => {});
+        }, 60_000);
+
+        return interval;
       } catch (err) {
         // Échec silencieux, le SW est un nice-to-have
         if (process.env.NODE_ENV !== 'production') {
@@ -24,12 +52,23 @@ export function ServiceWorkerRegister() {
       }
     };
 
+    let intervalId: ReturnType<typeof setInterval> | undefined;
+
+    const init = async () => {
+      intervalId = await register();
+    };
+
     // Register après le load pour ne pas ralentir le first paint
     if (document.readyState === 'complete') {
-      void register();
+      void init();
     } else {
-      window.addEventListener('load', register, { once: true });
+      window.addEventListener('load', () => void init(), { once: true });
     }
+
+    return () => {
+      navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange);
+      if (intervalId) clearInterval(intervalId);
+    };
   }, []);
 
   return null;

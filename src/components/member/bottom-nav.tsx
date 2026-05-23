@@ -4,7 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import type { Route } from 'next';
 import { usePathname } from 'next/navigation';
-import { IconCalendar, IconClockPlay, IconHome } from '@tabler/icons-react';
+import { IconCalendar, IconClockPlay, IconHome, IconSettings } from '@tabler/icons-react';
 import type { IconProps } from '@tabler/icons-react';
 import { motion } from 'framer-motion';
 import { useMemo, type ComponentType } from 'react';
@@ -17,7 +17,7 @@ export type BottomNavProps = {
 };
 
 export type BottomNavItem = {
-  id: 'home' | 'calendar' | 'service';
+  id: 'home' | 'calendar' | 'service' | 'settings';
   label: string;
   href: string;
   icon: ComponentType<IconProps>;
@@ -49,6 +49,7 @@ export function BottomNav({ nextEventDate }: BottomNavProps) {
       { id: 'home', label: 'Accueil', href: '/dashboard', icon: IconHome },
       { id: 'calendar', label: 'Calendrier', href: '/calendar', icon: IconCalendar },
       { id: 'service', label: 'Service Day', href: '/service-day', icon: IconClockPlay },
+      { id: 'settings', label: 'Profil', href: '/settings', icon: IconSettings },
     ],
     [],
   );

@@ -324,13 +324,47 @@ export async function loadMemberDashboard(
     };
   }
 
+  // --- Appreciation contextuelle basée sur l'activité récente ---
+  const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 3600 * 1000);
+  const fourWeeksAgo = new Date(now.getTime() - 28 * 24 * 3600 * 1000);
+
+  const pastAssignments = ctx.assignments
+    .filter(a => a.profile_id === profileId && a.status === 'present')
+    .map(a => {
+      const service = ctx.services.find(s => s.id === a.service_id);
+      return service ? new Date(service.service_date).getTime() : null;
+    })
+    .filter((t): t is number => t !== null && t < now.getTime())
+    .sort((a, b) => b - a);
+
+  const lastServed = pastAssignments[0] ?? 0;
+  const hasUpcoming = Boolean(nextEvent);
+
+  let appreciationMessage: string;
+  if (lastServed >= twoWeeksAgo.getTime()) {
+    appreciationMessage = 'Merci pour ton engagement lors du dernier service !';
+  } else if (hasUpcoming) {
+    appreciationMessage = 'On compte sur toi pour le prochain service !';
+  } else if (lastServed > 0 && lastServed < fourWeeksAgo.getTime()) {
+    appreciationMessage = 'Tu nous manques ! On espère te revoir bientôt.';
+  } else {
+    appreciationMessage = "Merci de faire partie de l'équipe Crew !";
+  }
+
+  const appreciation: DashboardData['appreciation'] = {
+    message: appreciationMessage,
+    author: "L'équipe Crew",
+    timeAgo: '',
+    avatar: { initials: 'C', color: '#DAF4AA' },
+  };
+
   return {
     profile: { id: profileId, name, initials, avatarColor, subtitle },
     validation,
     weeklyThought,
     calendar,
     nextEvent,
-    appreciation: null,
+    appreciation,
   };
 }
 

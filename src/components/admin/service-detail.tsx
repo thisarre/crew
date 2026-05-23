@@ -9,6 +9,7 @@ import {
   IconAlertCircle,
   IconArrowLeft,
   IconCheck,
+  IconCopy,
   IconDeviceTv,
   IconHeadphones,
   IconSend,
@@ -50,6 +51,10 @@ export function ServiceDetail({ data }: { data: ServiceDetailData }) {
   const [cancelling, setCancelling] = useState(false);
   const [cancelMessage, setCancelMessage] = useState<string | null>(null);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [showDuplicate, setShowDuplicate] = useState(false);
+  const [duplicateDate, setDuplicateDate] = useState('');
+  const [duplicating, setDuplicating] = useState(false);
+  const [duplicateError, setDuplicateError] = useState<string | null>(null);
 
   const handlePublish = async () => {
     if (publishing) return;
@@ -105,6 +110,41 @@ export function ServiceDetail({ data }: { data: ServiceDetailData }) {
       setCancelMessage(err instanceof Error ? err.message : 'unknown_error');
     } finally {
       setCancelling(false);
+    }
+  };
+
+  const handleDuplicate = async () => {
+    if (!duplicateDate || duplicating) return;
+    setDuplicateError(null);
+    setDuplicating(true);
+    try {
+      const skillIds = data.slots.map(s => s.skillId);
+      const res = await fetch('/api/services', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          eventType: data.service.event_type,
+          dates: [duplicateDate],
+          startTime: data.service.start_time ?? undefined,
+          arrivalTime: data.service.arrival_time ?? undefined,
+          location: data.service.location ?? undefined,
+          spiritualTheme: data.service.spiritual_theme ?? undefined,
+          slotSkillIds: skillIds,
+        }),
+      });
+      const body = await res.json().catch(() => ({ ok: false, error: `HTTP ${res.status}` }));
+      if (!res.ok || !body.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
+      const newId = body.services?.[0]?.serviceId ?? body.services?.[0]?.id;
+      if (newId) {
+        router.push(`/admin/services/${newId}` as Route);
+      } else {
+        router.push('/admin/services' as Route);
+      }
+    } catch (err) {
+      setDuplicateError(err instanceof Error ? err.message : 'unknown_error');
+    } finally {
+      setDuplicating(false);
     }
   };
 
@@ -242,6 +282,48 @@ export function ServiceDetail({ data }: { data: ServiceDetailData }) {
             <p className="pointer-events-auto rounded-[12px] bg-white px-3 py-2 text-center text-[11px] font-medium text-ink">
               {cancelMessage}
             </p>
+          )}
+
+          {duplicateError && (
+            <p className="pointer-events-auto rounded-[12px] bg-[var(--color-error-bg)] px-3 py-2 text-center text-[11px] font-medium text-[var(--color-error-fg)]">
+              {duplicateError}
+            </p>
+          )}
+
+          {showDuplicate ? (
+            <div className="pointer-events-auto flex items-center gap-2 rounded-[16px] bg-white p-2.5 shadow-[0_4px_12px_rgba(22,22,27,0.08)]">
+              <input
+                type="date"
+                value={duplicateDate}
+                onChange={e => setDuplicateDate(e.target.value)}
+                className="flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)] px-3 py-2.5 text-[13px] font-medium text-ink"
+              />
+              <button
+                type="button"
+                onClick={handleDuplicate}
+                disabled={!duplicateDate || duplicating}
+                className="flex items-center gap-1.5 rounded-full bg-ink px-4 py-2.5 text-[12px] font-bold text-white active:scale-[0.97] disabled:opacity-50"
+              >
+                <IconCopy size={14} stroke={2} />
+                {duplicating ? 'Création...' : 'Dupliquer'}
+              </button>
+              <button
+                type="button"
+                onClick={() => { setShowDuplicate(false); setDuplicateDate(''); setDuplicateError(null); }}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--color-bg)]"
+              >
+                <IconX size={14} stroke={2} className="text-ink" />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setShowDuplicate(true)}
+              className="pointer-events-auto flex w-full items-center justify-center gap-2 rounded-full border border-[var(--color-border)] bg-white py-3 text-[13px] font-bold text-ink active:scale-[0.98]"
+            >
+              <IconCopy size={15} stroke={2} />
+              Dupliquer
+            </button>
           )}
 
           {isCancelled ? (
