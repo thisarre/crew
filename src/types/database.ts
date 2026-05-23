@@ -177,7 +177,7 @@ export type Database = {
         Row: {
           arrival_time: string | null;
           created_at: string | null;
-          event_type: 'sunday_service' | 'midweek_service' | 'team_call';
+          event_type: 'sunday_service' | 'midweek_service' | 'team_call' | 'special_event';
           id: string;
           location: string | null;
           notes: string | null;
@@ -196,7 +196,7 @@ export type Database = {
         Insert: {
           arrival_time?: string | null;
           created_at?: string | null;
-          event_type: 'sunday_service' | 'midweek_service' | 'team_call';
+          event_type: 'sunday_service' | 'midweek_service' | 'team_call' | 'special_event';
           id?: string;
           location?: string | null;
           notes?: string | null;
@@ -215,7 +215,7 @@ export type Database = {
         Update: {
           arrival_time?: string | null;
           created_at?: string | null;
-          event_type?: 'sunday_service' | 'midweek_service' | 'team_call';
+          event_type?: 'sunday_service' | 'midweek_service' | 'team_call' | 'special_event';
           id?: string;
           location?: string | null;
           notes?: string | null;

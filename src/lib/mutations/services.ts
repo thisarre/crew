@@ -9,7 +9,7 @@ type AssignmentInsert = Database['public']['Tables']['assignments']['Insert'];
 
 export type CreateServiceInput = {
   organizationId?: string;
-  eventType: ServiceInsert['event_type'] | 'special_event';
+  eventType: ServiceInsert['event_type'];
   serviceDate: string; // yyyy-mm-dd
   startTime?: string; // HH:mm or HH:mm:ss — absent pour sunday/midweek
   arrivalTime?: string;
@@ -36,7 +36,7 @@ export async function createService(
   const orgId = input.organizationId ?? ORG_ID;
 
   // 1. Insert du service
-  const servicePayload: Omit<ServiceInsert, 'event_type'> & { event_type: string } = {
+  const servicePayload: ServiceInsert = {
     organization_id: orgId,
     event_type: input.eventType,
     title: input.eventType === 'sunday_service' ? 'Culte dimanche' : input.eventType === 'midweek_service' ? 'Service de semaine' : input.eventType === 'special_event' ? 'Événement spécial' : 'Call équipe',
@@ -50,8 +50,7 @@ export async function createService(
 
   const { data: service, error: serviceErr } = await client
     .from('services')
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .insert(servicePayload as any)
+    .insert(servicePayload)
     .select()
     .single();
   if (serviceErr || !service) throw serviceErr ?? new Error('service_insert_failed');
