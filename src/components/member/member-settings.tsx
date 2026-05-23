@@ -49,7 +49,7 @@ type MemberSettingsProps = {
 
 export function MemberSettings({ profile }: MemberSettingsProps) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
+  const [, startTransition] = useTransition();
 
   const [displayName, setDisplayName] = useState(profile.displayName);
   const [avatarColor, setAvatarColor] = useState(profile.avatarColor);
