@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
+import { getSessionFromRequest } from '@/lib/auth/session';
 import { createClient } from '@/lib/supabase/server';
 import { fetchSpiritualContent } from '@/lib/queries/admin';
 import { suggestSpiritualContent } from '@/lib/ai/spiritual-suggest';
@@ -10,6 +11,10 @@ const Body = z.object({
 });
 
 export async function POST(request: Request) {
+  const session = getSessionFromRequest(request);
+  if (!session) return NextResponse.json({ ok: false, error: 'unauthenticated' }, { status: 401 });
+  if (!session.isAdmin) return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
+
   let payload: z.infer<typeof Body>;
   try {
     payload = Body.parse(await request.json());

@@ -1,5 +1,6 @@
+import { redirect } from 'next/navigation';
+
 import { MemberDashboard, type NextAssignmentInfo } from '@/components/member/dashboard';
-import { PROFILE_IDS } from '@/data/seed';
 import { createClient } from '@/lib/supabase/server';
 import { getSessionFromCookies } from '@/lib/auth/session';
 import { getNextMemberAssignment, loadMemberDashboard } from '@/lib/queries/member';
@@ -8,7 +9,8 @@ export const dynamic = 'force-dynamic';
 
 export default async function DashboardPage() {
   const session = getSessionFromCookies();
-  const profileId = session?.profileId ?? PROFILE_IDS.isaac;
+  if (!session) redirect('/');
+  const profileId = session.profileId;
 
   const supabase = createClient();
   const [data, next] = await Promise.all([

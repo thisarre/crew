@@ -1,16 +1,18 @@
 import type { ReactNode } from 'react';
 
+import { redirect } from 'next/navigation';
+
 import { BottomNav } from '@/components/member/bottom-nav';
 import { createClient } from '@/lib/supabase/server';
 import { getSessionFromCookies } from '@/lib/auth/session';
 import { getNextMemberAssignment } from '@/lib/queries/member';
-import { PROFILE_IDS } from '@/data/seed';
 
 export const dynamic = 'force-dynamic';
 
 export default async function MemberLayout({ children }: { children: ReactNode }) {
   const session = getSessionFromCookies();
-  const profileId = session?.profileId ?? PROFILE_IDS.isaac;
+  if (!session) redirect('/');
+  const profileId = session.profileId;
 
   // Date du prochain service du membre — sert à mettre en avant l'onglet "Service Day" le jour J.
   let nextEventDate: string | null = null;

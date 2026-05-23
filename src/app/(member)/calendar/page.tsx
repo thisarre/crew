@@ -1,5 +1,6 @@
+import { redirect } from 'next/navigation';
+
 import { MonthlyConsultation } from '@/components/member/monthly-consultation';
-import { PROFILE_IDS } from '@/data/seed';
 import { createClient } from '@/lib/supabase/server';
 import { getSessionFromCookies } from '@/lib/auth/session';
 import { getReferenceToday } from '@/lib/queries/admin';
@@ -23,7 +24,8 @@ export default async function CalendarPage({
   searchParams: { m?: string };
 }) {
   const session = getSessionFromCookies();
-  const profileId = session?.profileId ?? PROFILE_IDS.isaac;
+  if (!session) redirect('/');
+  const profileId = session.profileId;
 
   const today = getReferenceToday();
   const fallback = { year: today.getUTCFullYear(), month: today.getUTCMonth() + 1 };

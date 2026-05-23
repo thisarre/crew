@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
+import { getSessionFromRequest } from '@/lib/auth/session';
 import { createClient } from '@/lib/supabase/server';
 import { notifyProfiles, notifyServiceAssignees } from '@/lib/push/notify';
 
@@ -30,9 +31,12 @@ const Body = z.union([
  *   - 'profiles' avec profileIds → envoie à un ou plusieurs membres
  *   - 'service'  avec serviceId  → envoie à tous les assignés présents de ce service
  *
- * TODO : ajouter une vraie auth admin (cookie / header de session) avant la prod.
  */
 export async function POST(request: Request) {
+  const session = getSessionFromRequest(request);
+  if (!session) return NextResponse.json({ ok: false, error: 'unauthenticated' }, { status: 401 });
+  if (!session.isAdmin) return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
+
   let payload: z.infer<typeof Body>;
   try {
     payload = Body.parse(await request.json());

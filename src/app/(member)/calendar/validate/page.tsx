@@ -1,5 +1,6 @@
+import { redirect } from 'next/navigation';
+
 import { ValidationView } from '@/components/member/validation/validation-view';
-import { PROFILE_IDS } from '@/data/seed';
 import { createClient } from '@/lib/supabase/server';
 import { getSessionFromCookies } from '@/lib/auth/session';
 import { fetchValidationsForMonth, getReferenceToday } from '@/lib/queries/admin';
@@ -9,7 +10,8 @@ export const dynamic = 'force-dynamic';
 
 export default async function ValidationPage() {
   const session = getSessionFromCookies();
-  const profileId = session?.profileId ?? PROFILE_IDS.isaac;
+  if (!session) redirect('/');
+  const profileId = session.profileId;
 
   const today = getReferenceToday();
   const year = today.getUTCFullYear();
