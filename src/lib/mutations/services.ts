@@ -50,7 +50,8 @@ export async function createService(
 
   const { data: service, error: serviceErr } = await client
     .from('services')
-    .insert(servicePayload)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .insert(servicePayload as any)
     .select()
     .single();
   if (serviceErr || !service) throw serviceErr ?? new Error('service_insert_failed');
