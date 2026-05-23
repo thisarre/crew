@@ -32,7 +32,7 @@ export async function PATCH(request: Request) {
 
   try {
     const supabase = createClient();
-    const updates: Record<string, string> = {};
+    const updates: { display_name?: string; initials?: string; avatar_color?: string } = {};
 
     if (payload.display_name) {
       const name = payload.display_name.trim();
@@ -45,7 +45,7 @@ export async function PATCH(request: Request) {
 
     const { error } = await supabase
       .from('profiles')
-      .update(updates)
+      .update(updates as typeof updates & Record<string, unknown>)
       .eq('id', session.profileId);
 
     if (error) throw new Error(error.message);
