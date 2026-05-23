@@ -1,11 +1,9 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import crypto from 'node:crypto';
 
 // ---------------------------------------------------------------------------
-// Inline cookie verification (middleware runs on the Edge/Node layer and
-// cannot import server-only helpers from src/lib/auth/session.ts).
-// The logic mirrors `decode()` + `sign()` in session.ts.
+// Inline cookie verification using Web Crypto API (Edge-compatible).
+// Mirrors the HMAC SHA-256 logic from session.ts but without node:crypto.
 // ---------------------------------------------------------------------------
 
 const COOKIE_NAME = 'crew_session';
@@ -22,18 +20,44 @@ function getSecret(): string {
   return 'crew-dev-fallback-secret-please-override-in-env';
 }
 
-function sign(value: string): string {
-  return crypto.createHmac('sha256', getSecret()).update(value).digest('base64url');
+// Base64url encode/decode helpers (no Node Buffer in Edge)
+function base64urlDecode(str: string): Uint8Array {
+  const base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  const pad = base64.length % 4 === 0 ? '' : '='.repeat(4 - (base64.length % 4));
+  const binary = atob(base64 + pad);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return bytes;
 }
 
-function decode(token: string): SessionPayload | null {
+function base64urlEncode(bytes: Uint8Array): string {
+  let binary = '';
+  for (const b of bytes) binary += String.fromCharCode(b);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+
+async function sign(value: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(getSecret()),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(value));
+  return base64urlEncode(new Uint8Array(signature));
+}
+
+async function decode(token: string): Promise<SessionPayload | null> {
   const dot = token.indexOf('.');
   if (dot < 0) return null;
   const base = token.slice(0, dot);
   const signature = token.slice(dot + 1);
-  if (sign(base) !== signature) return null;
+  const expected = await sign(base);
+  if (expected !== signature) return null;
   try {
-    const json = Buffer.from(base, 'base64url').toString('utf8');
+    const json = new TextDecoder().decode(base64urlDecode(base));
     return JSON.parse(json) as SessionPayload;
   } catch {
     return null;
@@ -44,12 +68,12 @@ function decode(token: string): SessionPayload | null {
 // Middleware
 // ---------------------------------------------------------------------------
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // --- Parse session cookie (once) ----------------------------------------
   const token = request.cookies.get(COOKIE_NAME)?.value;
-  const session = token ? decode(token) : null;
+  const session = token ? await decode(token) : null;
 
   // --- Auth page: redirect logged-in users --------------------------------
   if (pathname === '/') {
@@ -72,7 +96,8 @@ export function middleware(request: NextRequest) {
   if (
     pathname.startsWith('/dashboard') ||
     pathname.startsWith('/calendar') ||
-    pathname.startsWith('/service-day')
+    pathname.startsWith('/service-day') ||
+    pathname.startsWith('/settings')
   ) {
     if (!session) {
       return NextResponse.redirect(new URL('/', request.url));
@@ -85,20 +110,10 @@ export function middleware(request: NextRequest) {
 
 // ---------------------------------------------------------------------------
 // Matcher — only run middleware on relevant paths.
-// Excludes API routes, Next.js internals, static assets, and service worker.
 // ---------------------------------------------------------------------------
 
 export const config = {
   matcher: [
-    /*
-     * Match all paths EXCEPT:
-     *  - /api/*          (API routes handle their own auth)
-     *  - /_next/*        (Next.js internals / static files)
-     *  - /sw.js          (service worker)
-     *  - /icon*          (icons / favicons)
-     *  - /manifest*      (PWA manifest)
-     *  - /offline.html   (offline fallback page)
-     */
     '/((?!api|_next|sw\\.js|icon|manifest|offline\\.html).*)',
   ],
 };
