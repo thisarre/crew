@@ -38,7 +38,7 @@ const statusBadge = (service: ServiceListItem) => {
   return { text: 'Publié', cls: 'bg-[var(--color-sage)] text-ink' };
 };
 
-const eventTypeLabel = (type: ServiceListItem['eventType']) => {
+const eventTypeLabel = (type: string) => {
   if (type === 'midweek_service') return 'Semaine';
   if (type === 'team_call') return 'Call équipe';
   if (type === 'special_event') return 'Spécial';

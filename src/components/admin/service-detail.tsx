@@ -34,7 +34,7 @@ const SkillIcon = ({ badge, size = 18 }: { badge: 'sono' | 'camera' | 'diffusion
   return <IconHeadphones size={size} stroke={2} className="text-ink" />;
 };
 
-const eventTypeLabel = (type: ServiceDetailData['service']['event_type']) => {
+const eventTypeLabel = (type: string) => {
   if (type === 'midweek_service') return 'Service de semaine';
   if (type === 'team_call') return 'Call équipe';
   if (type === 'special_event') return 'Événement spécial';
