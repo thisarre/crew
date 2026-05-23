@@ -185,9 +185,9 @@ export function ServiceNew() {
         body: JSON.stringify({
           eventType,
           dates,
-          startTime: type === 'call' ? start : undefined,
+          startTime: start,
           arrivalTime: type !== 'call' ? arrival : undefined,
-          location: type === 'call' ? duration : undefined,
+          location: type === 'call' ? `Durée : ${duration}` : undefined,
           slotSkillIds: type === 'sunday' ? skillIdsActive : [],
           initialAssignmentsByDate: withTeam ? initialAssignmentsByDate : undefined,
         }),
@@ -353,7 +353,10 @@ export function ServiceNew() {
                 <TimeSegment label="Durée" value={duration} onChange={setDuration} />
               </>
             ) : (
-              <TimeSegment label="Arrivée" value={arrival} onChange={setArrival} />
+              <>
+                <TimeSegment label="Arrivée" value={arrival} onChange={setArrival} />
+                <TimeSegment label="Début" value={start} onChange={setStart} />
+              </>
             )}
           </div>
         </div>
