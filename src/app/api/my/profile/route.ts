@@ -45,7 +45,8 @@ export async function PATCH(request: Request) {
 
     const { error } = await supabase
       .from('profiles')
-      .update(updates as typeof updates & Record<string, unknown>)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .update(updates as any)
       .eq('id', session.profileId);
 
     if (error) throw new Error(error.message);
