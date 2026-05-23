@@ -601,13 +601,23 @@ function SlotCard({ slot, serviceId }: { slot: ServiceSlotDetail; serviceId: str
                     {c.initials}
                   </div>
                   <p className={`flex-1 text-[12px] font-bold ${primaryId === c.profileId ? 'text-white' : 'text-ink'}`}>{c.name}</p>
-                  <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
-                    c.level === 'learning'
-                      ? 'bg-[var(--color-warning-bg)] text-[var(--color-warning-fg)]'
-                      : primaryId === c.profileId ? 'bg-[var(--color-sage)] text-ink' : 'bg-white text-ink'
-                  }`}>
-                    {c.level === 'trainer' ? 'Formateur' : c.level === 'learning' ? 'Apprenti' : 'Autonome'}
-                  </span>
+                  <div className="flex items-center gap-1">
+                    {c.isAdmin && (
+                      <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${primaryId === c.profileId ? 'bg-[var(--color-sage)] text-ink' : 'bg-ink text-white'}`}>Admin</span>
+                    )}
+                    {!c.hasSkill && !c.isAdmin && (
+                      <span className="rounded-full bg-[var(--color-bg)] px-1.5 py-0.5 text-[9px] font-bold text-[var(--color-text-secondary)]">Autre</span>
+                    )}
+                    {c.hasSkill && (
+                      <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
+                        c.level === 'learning'
+                          ? 'bg-[var(--color-warning-bg)] text-[var(--color-warning-fg)]'
+                          : primaryId === c.profileId ? 'bg-[var(--color-sage)] text-ink' : 'bg-white text-ink'
+                      }`}>
+                        {c.level === 'trainer' ? 'Formateur' : c.level === 'learning' ? 'Apprenti' : 'Autonome'}
+                      </span>
+                    )}
+                  </div>
                 </button>
               ))}
             </div>
@@ -623,15 +633,6 @@ function SlotCard({ slot, serviceId }: { slot: ServiceSlotDetail; serviceId: str
                 )}
               </p>
               <div className="space-y-1.5">
-                <button
-                  type="button"
-                  onClick={() => setBinomeId(binomeId === 'admin' ? null : 'admin')}
-                  className={`flex w-full items-center gap-2.5 rounded-[12px] px-3 py-2 text-left transition ${binomeId === 'admin' ? 'bg-ink' : 'bg-[var(--color-bg)]'}`}
-                >
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[var(--color-sage)] text-[10px] font-bold text-ink">Moi</div>
-                  <p className={`flex-1 text-[12px] font-bold ${binomeId === 'admin' ? 'text-white' : 'text-ink'}`}>Vous-même</p>
-                  {binomeId === 'admin' && <IconCheck size={13} stroke={2.5} className="text-[var(--color-sage)]" />}
-                </button>
                 {binomeCandidates.map(c => (
                   <button
                     key={c.profileId}
@@ -646,13 +647,20 @@ function SlotCard({ slot, serviceId }: { slot: ServiceSlotDetail; serviceId: str
                       {c.initials}
                     </div>
                     <p className={`flex-1 text-[12px] font-bold ${binomeId === c.profileId ? 'text-white' : 'text-ink'}`}>{c.name}</p>
-                    <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
-                      c.level === 'learning'
-                        ? 'bg-[var(--color-warning-bg)] text-[var(--color-warning-fg)]'
-                        : binomeId === c.profileId ? 'bg-[var(--color-sage)] text-ink' : 'bg-white text-ink'
-                    }`}>
-                      {c.level === 'trainer' ? 'Formateur' : c.level === 'learning' ? 'Apprenti' : 'Autonome'}
-                    </span>
+                    <div className="flex items-center gap-1">
+                      {c.isAdmin && (
+                        <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${binomeId === c.profileId ? 'bg-[var(--color-sage)] text-ink' : 'bg-ink text-white'}`}>Admin</span>
+                      )}
+                      {c.hasSkill && (
+                        <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
+                          c.level === 'learning'
+                            ? 'bg-[var(--color-warning-bg)] text-[var(--color-warning-fg)]'
+                            : binomeId === c.profileId ? 'bg-[var(--color-sage)] text-ink' : 'bg-white text-ink'
+                        }`}>
+                          {c.level === 'trainer' ? 'Formateur' : c.level === 'learning' ? 'Apprenti' : 'Autonome'}
+                        </span>
+                      )}
+                    </div>
                   </button>
                 ))}
               </div>
