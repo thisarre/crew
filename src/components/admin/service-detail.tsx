@@ -258,9 +258,9 @@ export function ServiceDetail({ data }: { data: ServiceDetailData }) {
           <button
             type="button"
             onClick={handlePublish}
-            disabled={!data.isPublishable || publishing || isAlreadyPublished || isCancelled}
+            disabled={publishing || isAlreadyPublished || isCancelled}
             className={`pointer-events-auto flex w-full items-center justify-center gap-2 rounded-full py-3.5 text-[14px] font-bold shadow-[0_8px_24px_rgba(22,22,27,0.15)] transition ${
-              data.isPublishable && !isAlreadyPublished && !isCancelled
+              !isAlreadyPublished && !isCancelled
                 ? 'bg-ink text-white active:scale-[0.98]'
                 : 'bg-ink text-white opacity-50'
             }`}
@@ -271,9 +271,9 @@ export function ServiceDetail({ data }: { data: ServiceDetailData }) {
               : publishing
                 ? 'Publication...'
                 : "Publier et notifier l'équipe"}
-            {!data.isPublishable && !isAlreadyPublished && (
+            {data.openSlotsCount > 0 && !isAlreadyPublished && (
               <span className="ml-1 rounded-full bg-white/15 px-2 py-0.5 text-[11px]">
-                {data.openSlotsCount} poste{data.openSlotsCount > 1 ? 's' : ''} à pourvoir
+                {data.openSlotsCount} poste{data.openSlotsCount > 1 ? 's' : ''} ouvert{data.openSlotsCount > 1 ? 's' : ''}
               </span>
             )}
           </button>
