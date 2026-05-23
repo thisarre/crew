@@ -9,7 +9,7 @@ type AssignmentInsert = Database['public']['Tables']['assignments']['Insert'];
 
 export type CreateServiceInput = {
   organizationId?: string;
-  eventType: ServiceInsert['event_type'];
+  eventType: ServiceInsert['event_type'] | 'special_event';
   serviceDate: string; // yyyy-mm-dd
   startTime?: string; // HH:mm or HH:mm:ss — absent pour sunday/midweek
   arrivalTime?: string;
@@ -36,7 +36,7 @@ export async function createService(
   const orgId = input.organizationId ?? ORG_ID;
 
   // 1. Insert du service
-  const servicePayload: ServiceInsert = {
+  const servicePayload: Omit<ServiceInsert, 'event_type'> & { event_type: string } = {
     organization_id: orgId,
     event_type: input.eventType,
     title: input.eventType === 'sunday_service' ? 'Culte dimanche' : input.eventType === 'midweek_service' ? 'Service de semaine' : input.eventType === 'special_event' ? 'Événement spécial' : 'Call équipe',
