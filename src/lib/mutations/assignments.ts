@@ -5,6 +5,7 @@ export type AssignSlotInput = {
   slotId: string;
   profileId: string;
   isTrainee?: boolean;
+  force?: boolean; // admin override: replace existing assignee if slot full
 };
 
 export type AssignSlotResult = {
@@ -54,9 +55,23 @@ export async function assignToSlot(
       .eq('id', input.slotId)
       .maybeSingle();
     const required = slot?.positions_required ?? 1;
-    const presentTitulars = rows.filter(a => a.status === 'present' && !a.is_trainee).length;
-    if (presentTitulars >= required) {
-      throw new SlotFullError();
+    const presentTitulars = rows.filter(a => a.status === 'present' && !a.is_trainee);
+    if (presentTitulars.length >= required) {
+      if (input.force) {
+        // Admin force: cancel existing titulars to make room
+        for (const existing of presentTitulars) {
+          await client
+            .from('assignments')
+            .update({
+              status: 'cancelled',
+              cancelled_at: new Date().toISOString(),
+              cancelled_reason: 'Remplacé par l\'admin',
+            })
+            .eq('id', existing.id);
+        }
+      } else {
+        throw new SlotFullError();
+      }
     }
   }
 

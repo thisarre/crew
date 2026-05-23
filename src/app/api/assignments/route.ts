@@ -10,6 +10,7 @@ const CreateBody = z.object({
   slotId: z.string().uuid(),
   profileId: z.string().uuid(),
   isTrainee: z.boolean().optional(),
+  force: z.boolean().optional(),
 });
 
 const CancelBody = z.object({

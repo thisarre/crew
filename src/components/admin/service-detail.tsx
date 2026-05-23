@@ -396,7 +396,7 @@ function SlotCard({ slot, serviceId }: { slot: ServiceSlotDetail; serviceId: str
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'same-origin',
-          body: JSON.stringify({ serviceId, slotId: slot.slotId, profileId, isTrainee }),
+          body: JSON.stringify({ serviceId, slotId: slot.slotId, profileId, isTrainee, force: true }),
         });
         const body = await res.json().catch(() => ({ ok: false, error: `HTTP ${res.status}` }));
         if (!res.ok || !body.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
@@ -430,7 +430,7 @@ function SlotCard({ slot, serviceId }: { slot: ServiceSlotDetail; serviceId: str
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'same-origin',
-          body: JSON.stringify({ serviceId, slotId: slot.slotId, profileId, isTrainee }),
+          body: JSON.stringify({ serviceId, slotId: slot.slotId, profileId, isTrainee, force: true }),
         });
         const body = await res.json().catch(() => ({ ok: false, error: `HTTP ${res.status}` }));
         if (!res.ok || !body.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
