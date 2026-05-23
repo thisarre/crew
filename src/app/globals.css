@@ -119,22 +119,3 @@ section {
   animation: hint 1.5s ease-in-out infinite;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-sage: #3A5A30;
-    --color-mint: #2A6B63;
-    --color-lilac: #6A4A8A;
-    --color-ink: #F4F4F2;
-    --color-bg: #16161B;
-    --color-bg-soft: #1E1E24;
-    --color-white: #1E1E24;
-    --color-text-secondary: #9A9A9F;
-    --color-text-muted: #6A6A70;
-    --color-border: #2A2A30;
-    --color-border-soft: #222228;
-    --color-error-bg: #3A1A1A;
-    --color-error-fg: #F28B8B;
-    --color-warning-bg: #3A2E1A;
-    --color-warning-fg: #E8B85A;
-  }
-}
