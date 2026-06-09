@@ -28,13 +28,17 @@ const shouldUseMock = () =>
 
 export type SupabaseServerClient = SupabaseClient<Database>;
 
-export const createClient = (): SupabaseServerClient => {
+type CreateClientOptions = {
+  useServiceRole?: boolean;
+};
+
+export const createClient = (options: CreateClientOptions = {}): SupabaseServerClient => {
   if (shouldUseMock()) {
     return createMockSupabaseClient() as unknown as SupabaseServerClient;
   }
 
   const url = getSupabaseUrl();
-  const key = getServiceRoleKey() ?? getAnonKey();
+  const key = options.useServiceRole ? (getServiceRoleKey() ?? getAnonKey()) : getAnonKey();
 
   // Next.js patche `fetch` et met en cache les requêtes par défaut (Data Cache).
   // On force `cache: 'no-store'` pour que chaque requête Supabase reflète l'état réel de la base
@@ -51,3 +55,6 @@ export const createClient = (): SupabaseServerClient => {
     },
   });
 };
+
+export const createServiceClient = (): SupabaseServerClient =>
+  createClient({ useServiceRole: true });
