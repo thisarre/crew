@@ -19,28 +19,18 @@ beforeEach(() => {
 });
 
 describe('detect (détecteurs partagés)', () => {
-  it('detectUnvalidatedMembers retourne les membres assignés non validés', async () => {
+  it("detectUnvalidatedMembers ne relance personne dans l'état initial", async () => {
     const ctx = await loadAdminContext(getClient());
     const now = getReferenceToday();
     const members = detectUnvalidatedMembers(ctx, now);
-    expect(members.length).toBeGreaterThan(0);
-    // Stéphanie est assignée et n'a pas validé (cf. fixtures)
-    expect(members.some(m => m.profile.id === PROFILE_IDS.stephanie)).toBe(true);
-    // tous sont des membres actifs avec une ancienneté calculée
-    for (const m of members) {
-      expect(m.profile.role).toBe('member');
-      expect(m.daysSincePublish).toBeGreaterThanOrEqual(0);
-    }
+    expect(members).toHaveLength(0);
   });
 
-  it('detectCancelledNeedingReplacement repère le créneau Diffusion libéré (non pourvu)', async () => {
+  it("detectCancelledNeedingReplacement ne repère rien dans l'état initial", async () => {
     const ctx = await loadAdminContext(getClient());
     const now = getReferenceToday();
     const needs = detectCancelledNeedingReplacement(ctx, now);
-    expect(needs.length).toBeGreaterThan(0);
-    const open = needs.find(n => !n.slotFilled);
-    expect(open).toBeDefined();
-    expect(open!.candidates).toBeGreaterThan(0);
+    expect(needs).toHaveLength(0);
   });
 });
 

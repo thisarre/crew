@@ -10,34 +10,30 @@ const getClient = () => createMockSupabaseClient() as unknown as SupabaseServerC
 describe('loadMemberMonthView (consultation)', () => {
   beforeEach(() => __resetMockData());
 
-  it("retourne la vue de juin 2025 d'Isaac avec stats et calendrier", async () => {
-    const data = await loadMemberMonthView(getClient(), PROFILE_IDS.isaac, { year: 2025, month: 6 });
-    expect(data.monthLabel).toBe('Juin 2025');
-    expect(data.year).toBe(2025);
+  it("retourne la vue de juin 2026 d'Isaac sans engagement initial", async () => {
+    const data = await loadMemberMonthView(getClient(), PROFILE_IDS.isaac, { year: 2026, month: 6 });
+    expect(data.monthLabel).toBe('Juin 2026');
+    expect(data.year).toBe(2026);
     expect(data.month).toBe(6);
-    // Isaac a 3 services en juin (8 servi, 22 à venir, 25 à venir)
-    expect(data.stats.engagements).toBeGreaterThanOrEqual(3);
-    expect(data.stats.present).toBeGreaterThanOrEqual(3);
+    expect(data.stats.engagements).toBe(0);
+    expect(data.stats.present).toBe(0);
     expect(data.stats.absent).toBe(0);
-    // Le calendrier couvre les 30 jours de juin + placeholders de tête
+    // Le calendrier couvre les 30 jours de juin.
     const dayCells = data.calendar.filter(c => c.day);
     expect(dayCells.length).toBe(30);
   });
 
-  it('sépare correctement les services à venir et passés (référence 17 juin)', async () => {
-    const data = await loadMemberMonthView(getClient(), PROFILE_IDS.isaac, { year: 2025, month: 6 });
-    // 8 juin est passé ; 22 et 25 sont à venir
-    expect(data.past.some(e => e.date === '2025-06-08')).toBe(true);
-    expect(data.upcoming.some(e => e.date === '2025-06-22')).toBe(true);
-    expect(data.upcoming.some(e => e.date === '2025-06-25')).toBe(true);
+  it('ne mélange pas le culte ouvert avec des engagements membre', async () => {
+    const data = await loadMemberMonthView(getClient(), PROFILE_IDS.isaac, { year: 2026, month: 6 });
+    expect(data.past).toHaveLength(0);
+    expect(data.upcoming).toHaveLength(0);
   });
 
-  it('marque les absences (cancelled) dans les stats et le calendrier — Dave', async () => {
-    const data = await loadMemberMonthView(getClient(), PROFILE_IDS.dave, { year: 2025, month: 6 });
-    // Dave a 1 présent (8 juin) + 2 annulés (22, 29)
-    expect(data.stats.absent).toBeGreaterThanOrEqual(1);
+  it("ne marque aucune absence dans l'état initial — Dave", async () => {
+    const data = await loadMemberMonthView(getClient(), PROFILE_IDS.dave, { year: 2026, month: 6 });
+    expect(data.stats.absent).toBe(0);
     const cancelledCell = data.calendar.find(c => c.status === 'cancelled');
-    expect(cancelledCell).toBeDefined();
+    expect(cancelledCell).toBeUndefined();
   });
 
   it('calcule prev/next correctement, y compris les bascules d\'année', async () => {
@@ -50,11 +46,10 @@ describe('loadMemberMonthView (consultation)', () => {
   });
 
   it('indique le statut de validation du mois', async () => {
-    const data = await loadMemberMonthView(getClient(), PROFILE_IDS.isaac, { year: 2025, month: 6 });
-    // Isaac a une validation juin dans le seed
-    expect(data.validated).toBe(true);
+    const data = await loadMemberMonthView(getClient(), PROFILE_IDS.isaac, { year: 2026, month: 6 });
+    expect(data.validated).toBe(false);
 
-    const empty = await loadMemberMonthView(getClient(), PROFILE_IDS.isaac, { year: 2025, month: 3 });
+    const empty = await loadMemberMonthView(getClient(), PROFILE_IDS.isaac, { year: 2026, month: 3 });
     expect(empty.validated).toBe(false);
     expect(empty.stats.engagements).toBe(0);
   });

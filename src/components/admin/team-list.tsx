@@ -132,7 +132,7 @@ function MemberCard({ member }: { member: MemberWithSkills }) {
       if (hasAssignments) return { text: 'À relancer', classes: 'bg-[var(--color-warning-bg)] text-[var(--color-warning-fg)]' };
     }
     if (lastServedDate) {
-      const days = (new Date('2025-06-17').getTime() - new Date(lastServedDate).getTime()) / (1000 * 60 * 60 * 24);
+      const days = (new Date().getTime() - new Date(lastServedDate).getTime()) / (1000 * 60 * 60 * 24);
       if (days >= 21) return { text: 'Décroche', classes: 'bg-[var(--color-warning-bg)] text-[var(--color-warning-fg)]' };
     }
     return null;
@@ -190,10 +190,8 @@ function MemberCard({ member }: { member: MemberWithSkills }) {
   );
 }
 
-const REF_TODAY = new Date('2025-06-17');
-
 function formatServedLabel(iso: string, suffix: string) {
-  const days = Math.floor((REF_TODAY.getTime() - new Date(iso).getTime()) / (1000 * 60 * 60 * 24));
+  const days = Math.floor((new Date().getTime() - new Date(iso).getTime()) / (1000 * 60 * 60 * 24));
   if (days <= 0) return `Servi${suffix} aujourd'hui`;
   if (days === 1) return `Servi${suffix} hier`;
   if (days < 7) return `Servi${suffix} il y a ${days} j.`;

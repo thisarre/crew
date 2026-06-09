@@ -27,6 +27,6 @@ describe('MemberDashboard', () => {
     expect(screen.getByText('Semaine')).toBeInTheDocument();
     expect(screen.getByText('Call')).toBeInTheDocument();
     expect(screen.getByText(/Prochain événement/i)).toBeInTheDocument();
-    expect(screen.getByText(/Dimanche 22 juin/i)).toBeInTheDocument();
+    expect(screen.getByText(/Dimanche 14 juin/i)).toBeInTheDocument();
   });
 });

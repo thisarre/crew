@@ -38,7 +38,7 @@ export const rankReplacementCandidates = (
   input: ReplacementInput,
 ): RankedCandidate[] => {
   const { ctx, serviceId, slotId, cancelledProfileId } = input;
-  const now = input.referenceDate ?? new Date('2025-06-17T08:00:00Z');
+  const now = input.referenceDate ?? new Date();
 
   const slot = ctx.slots.find(s => s.id === slotId);
   if (!slot?.skill_id) return [];

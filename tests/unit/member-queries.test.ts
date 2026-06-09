@@ -10,54 +10,40 @@ const getClient = () => createMockSupabaseClient() as unknown as SupabaseServerC
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 describe('loadMemberValidationData', () => {
-  it("retourne les vraies assignments d'Isaac pour juin 2025 avec des UUIDs", async () => {
+  it("retourne un mois de juin 2026 vide pour Isaac avec un calendrier valide", async () => {
     const client = getClient();
-    const data = await loadMemberValidationData(client, PROFILE_IDS.isaac, { year: 2025, month: 6 });
+    const data = await loadMemberValidationData(client, PROFILE_IDS.isaac, { year: 2026, month: 6 });
 
     expect(data.profileName).toBe('Isaac');
-    expect(data.monthLabel).toBe('Juin 2025');
-    expect(data.events.length).toBeGreaterThanOrEqual(3);
-    // Tous les IDs doivent être des UUIDs (issus de la table assignments)
+    expect(data.monthLabel).toBe('Juin 2026');
+    expect(data.events).toHaveLength(0);
     data.events.forEach(e => {
       expect(UUID_RE.test(e.id)).toBe(true);
     });
-    // Isaac sert sur le 22 juin (sono), 25 juin (midweek), et a servi avant (8 juin)
-    const days = data.events.map(e => e.calendarDay).sort((a, b) => a - b);
-    expect(days).toContain(22);
-    expect(days).toContain(25);
   });
 
-  it("liste les coéquipiers pour chaque event d'Isaac", async () => {
+  it("ne liste pas de coéquipiers tant qu'Isaac n'est pas assigné", async () => {
     const client = getClient();
-    const data = await loadMemberValidationData(client, PROFILE_IDS.isaac, { year: 2025, month: 6 });
-    const june22 = data.events.find(e => e.calendarDay === 22);
-    expect(june22).toBeDefined();
-    // Le 22 juin : Isaac (sono), Chana (caméra), Stéphanie (caméra trainee). Coéquipiers = Chana, Stéphanie.
-    const teammateNames = june22!.teammates.map(t => t.name);
-    expect(teammateNames).toContain('Chana');
-    expect(teammateNames).toContain('Stéphanie');
-    expect(teammateNames).not.toContain('Isaac');
+    const data = await loadMemberValidationData(client, PROFILE_IDS.isaac, { year: 2026, month: 6 });
+    expect(data.events).toHaveLength(0);
   });
 
-  it("marque les assignments annulées comme 'declined' au chargement", async () => {
+  it("ne remonte aucune assignation annulée dans l'état initial", async () => {
     const client = getClient();
-    const data = await loadMemberValidationData(client, PROFILE_IDS.dave, { year: 2025, month: 6 });
-    // Dave a 2 assignments cancelled (22 et 29 juin) + 1 present (8 juin)
+    const data = await loadMemberValidationData(client, PROFILE_IDS.dave, { year: 2026, month: 6 });
     const cancelled = data.events.filter(e => e.status === 'declined');
-    expect(cancelled.length).toBeGreaterThanOrEqual(1);
+    expect(cancelled).toHaveLength(0);
     const presentOrPending = data.events.filter(e => e.status === 'pending');
-    expect(presentOrPending.length).toBeGreaterThanOrEqual(1);
+    expect(presentOrPending).toHaveLength(0);
   });
 
   it('produit un calendrier avec les placeholders en début et le bon nombre de jours', async () => {
     const client = getClient();
-    const data = await loadMemberValidationData(client, PROFILE_IDS.isaac, { year: 2025, month: 6 });
-    // Juin 2025 a 30 jours, 1er juin = dimanche → 6 placeholders en début (L M M J V S avant le D=1)
-    expect(data.calendar.length).toBe(30 + 6);
-    // Le 22 juin (dimanche, Isaac sur sono) doit avoir un eventId
-    const cell22 = data.calendar.find(c => c.value === 22);
-    expect(cell22?.eventId).toBeDefined();
-    expect(UUID_RE.test(cell22!.eventId!)).toBe(true);
+    const data = await loadMemberValidationData(client, PROFILE_IDS.isaac, { year: 2026, month: 6 });
+    // Juin 2026 a 30 jours, 1er juin = lundi.
+    expect(data.calendar.length).toBe(30);
+    const cell14 = data.calendar.find(c => c.value === 14);
+    expect(cell14?.eventId).toBeUndefined();
   });
 
   it('retourne un set vide pour un membre sans engagement ce mois', async () => {
@@ -74,19 +60,15 @@ describe('loadMemberValidationData', () => {
 });
 
 describe('loadMemberDashboard', () => {
-  it('construit le dashboard depuis la base pour Isaac (mois courant figé en juin 2025)', async () => {
+  it('construit le dashboard depuis la base pour Isaac (mois courant figé en juin 2026)', async () => {
     const client = getClient();
     const data = await loadMemberDashboard(client, PROFILE_IDS.isaac);
 
     expect(data.profile.name).toBe('Isaac');
     expect(data.profile.id).toBe(PROFILE_IDS.isaac);
-    // La date est figée au 17 juin 2025 via tests/setup.ts.
-    expect(data.calendar.monthLabel).toBe('Juin 2025');
-    // La pensée publiée la plus récente remonte de la table spiritual_content.
-    expect(data.weeklyThought).not.toBeNull();
-    expect(data.weeklyThought?.reference).toBeTruthy();
-    // Isaac a un prochain service (22 juin) → carte non vide.
-    expect(data.nextEvent).not.toBeNull();
+    expect(data.calendar.monthLabel).toBe('Juin 2026');
+    expect(data.weeklyThought).toBeNull();
+    expect(data.nextEvent).toBeNull();
     // Pas de table appréciations chargée → bloc masqué.
     expect(data.appreciation).toBeNull();
   });

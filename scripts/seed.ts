@@ -5,11 +5,6 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '../src/types/database';
 import {
   ADMIN_SEED_TABLES,
-  ASSIGNMENTS_SEED,
-  MONTHLY_VALIDATIONS_SEED,
-  SERVICES_SEED,
-  SLOTS_SEED,
-  SPIRITUAL_CONTENT_SEED,
 } from '../src/data/admin-seed';
 import {
   MEMBER_SKILLS_SEED,
@@ -37,30 +32,18 @@ const resolveEnv = () => {
 type SupabaseServiceClient = SupabaseClient<Database>;
 
 const cleanupTables = async (client: SupabaseServiceClient) => {
-  const assignmentIds = ASSIGNMENTS_SEED.map(assignment => assignment.id!);
-  const slotIds = SLOTS_SEED.map(slot => slot.id!);
-  const serviceIds = SERVICES_SEED.map(service => service.id!);
-  const validationIds = MONTHLY_VALIDATIONS_SEED.map(validation => validation.id!);
-  const spiritualContentIds = SPIRITUAL_CONTENT_SEED.map(content => content.id!);
   const profileIds = PROFILES_SEED.map(profile => profile.id!);
   const skillIds = SKILLS_SEED.map(skill => skill.id!);
   const memberSkillIds = MEMBER_SKILLS_SEED.map(skill => skill.id);
 
-  if (assignmentIds.length) {
-    await client.from('assignments').delete().in('id', assignmentIds);
-  }
-  if (slotIds.length) {
-    await client.from('service_slots').delete().in('id', slotIds);
-  }
-  if (serviceIds.length) {
-    await client.from('services').delete().in('id', serviceIds);
-  }
-  if (validationIds.length) {
-    await client.from('monthly_validations').delete().in('id', validationIds);
-  }
-  if (spiritualContentIds.length) {
-    await client.from('spiritual_content').delete().in('id', spiritualContentIds);
-  }
+  await client.from('push_subscriptions').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  await client.from('appreciations').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  await client.from('availabilities').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  await client.from('monthly_validations').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  await client.from('assignments').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  await client.from('service_slots').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  await client.from('spiritual_content').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+  await client.from('services').delete().neq('id', '00000000-0000-0000-0000-000000000000');
   await client.from('member_skills').delete().in('id', memberSkillIds);
   if (profileIds.length) {
     await client.from('profiles').delete().in('id', profileIds);

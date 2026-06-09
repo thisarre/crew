@@ -16,28 +16,26 @@ import { SERVICE_IDS } from '@/data/admin-seed';
 const getClient = () => createMockSupabaseClient() as unknown as SupabaseServerClient;
 
 describe('admin queries', () => {
-  it('loadAdminContext exposes services, slots, assignments, validations and spiritual content', async () => {
+  it('loadAdminContext expose un planning initial vide sauf le culte du 14 juin', async () => {
     const ctx = await loadAdminContext(getClient());
     expect(ctx.profiles.length).toBeGreaterThan(0);
-    expect(ctx.services.length).toBeGreaterThanOrEqual(4);
-    expect(ctx.slots.length).toBeGreaterThan(0);
-    expect(ctx.assignments.length).toBeGreaterThan(0);
-    expect(ctx.validations.length).toBeGreaterThan(0);
-    expect(ctx.spiritual.length).toBeGreaterThan(0);
+    expect(ctx.services).toHaveLength(1);
+    expect(ctx.services[0]?.service_date).toBe('2026-06-14');
+    expect(ctx.slots).toHaveLength(3);
+    expect(ctx.assignments).toHaveLength(0);
+    expect(ctx.validations).toHaveLength(0);
+    expect(ctx.spiritual).toHaveLength(0);
   });
 
-  it('buildAdminDashboard produces alerts (cancelled, unvalidated, disengaging)', async () => {
+  it('buildAdminDashboard montre le prochain culte sans alertes historiques', async () => {
     const ctx = await loadAdminContext(getClient());
     const admin = ctx.profiles.find(p => p.id === PROFILE_IDS.alpha)!;
     const dashboard = buildAdminDashboard(ctx, admin);
 
     expect(dashboard.admin.name).toBe('Alpha');
     expect(dashboard.nextService).not.toBeNull();
-    expect(dashboard.nextService?.dateLabel).toMatch(/juin/i);
-
-    const kinds = new Set(dashboard.alerts.map(a => a.kind));
-    expect(kinds.has('cancelled')).toBe(true);
-    expect(kinds.has('unvalidated_month')).toBe(true);
+    expect(dashboard.nextService?.dateLabel).toMatch(/14 juin/i);
+    expect(dashboard.alerts).toHaveLength(0);
 
     expect(dashboard.stats.activeMembers).toBeGreaterThan(0);
     expect(dashboard.stats.attendancePercent).toBeGreaterThanOrEqual(0);
@@ -56,35 +54,33 @@ describe('admin queries', () => {
     expect(stephanie!.monthValidated).toBe(false);
   });
 
-  it('buildServiceDetail flags the open Diffusion slot on 23 juin and provides AI proposal', async () => {
+  it('buildServiceDetail affiche les trois postes ouverts du 14 juin avec propositions IA', async () => {
     const ctx = await loadAdminContext(getClient());
-    const detail = buildServiceDetail(ctx, SERVICE_IDS.june23);
+    const detail = buildServiceDetail(ctx, SERVICE_IDS.june14);
     expect(detail).not.toBeNull();
     expect(detail!.totalSlots).toBe(3);
-    expect(detail!.filledCount).toBe(2);
-    expect(detail!.openSlotsCount).toBeGreaterThanOrEqual(1);
+    expect(detail!.filledCount).toBe(0);
+    expect(detail!.openSlotsCount).toBe(3);
 
     const diffusionSlot = detail!.slots.find(s => s.skillName === 'Diffusion');
     expect(diffusionSlot?.status).toBe('open');
     expect(diffusionSlot?.aiProposal).not.toBeNull();
-    // La proposition ne doit pas re-proposer Dave qui a annulé
-    expect(diffusionSlot?.aiProposal?.name).not.toBe('Dave');
   });
 
-  it('buildServicesList returns flags for services with cancelled assignments', async () => {
+  it('buildServicesList signale le service non pourvu', async () => {
     const ctx = await loadAdminContext(getClient());
     const list = buildServicesList(ctx);
-    const june30 = list.find(s => s.id === SERVICE_IDS.june30);
-    expect(june30?.hasAlert).toBe(true);
-    const june23 = list.find(s => s.id === SERVICE_IDS.june23);
-    expect(june23?.hasAlert).toBe(true); // diffusion non pourvue
+    const june14 = list.find(s => s.id === SERVICE_IDS.june14);
+    expect(june14?.hasAlert).toBe(true);
+    expect(june14?.filledCount).toBe(0);
+    expect(june14?.totalSlots).toBe(3);
   });
 
-  it('buildMemberDetail returns status badge for member Stéphanie (unvalidated)', async () => {
+  it('buildMemberDetail retourne un statut neutre au départ', async () => {
     const ctx = await loadAdminContext(getClient());
     const detail = buildMemberDetail(ctx, PROFILE_IDS.stephanie);
     expect(detail).not.toBeNull();
-    expect(detail!.statusBadge).toBe('unvalidated');
+    expect(detail!.statusBadge).toBe('ok');
   });
 
   it('buildMemberDetail returns disengaging badge for Gloria (no future service, 3+ weeks silent)', async () => {

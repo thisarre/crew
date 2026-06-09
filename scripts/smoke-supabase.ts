@@ -61,14 +61,18 @@ async function main() {
     console.info(`   ${m.profile.display_name.padEnd(11)} | ${skills}`);
   });
 
-  console.info('\n📅 buildServiceDetail (23 juin) ...');
-  const detail = buildServiceDetail(ctx, SERVICE_IDS.june23);
-  if (!detail) throw new Error('Service 23 juin introuvable');
+  console.info('\n📅 buildServiceDetail (14 juin) ...');
+  const detail = buildServiceDetail(ctx, SERVICE_IDS.june14);
+  if (!detail) throw new Error('Service 14 juin introuvable');
   console.info(`   ${detail.dateLabel} — ${detail.filledCount}/${detail.totalSlots} pourvus, ${detail.cancelledCount} annulé(s)`);
   detail.slots.forEach(s => {
     const ai = s.aiProposal ? ` → IA propose ${s.aiProposal.name}` : '';
     console.info(`   - ${s.skillName.padEnd(10)} [${s.status}]${ai}`);
   });
+
+  if (ctx.services.length !== 1 || ctx.assignments.length !== 0 || ctx.validations.length !== 0 || ctx.spiritual.length !== 0) {
+    throw new Error('La base Supabase ne correspond pas à un départ neuf.');
+  }
 
   console.info('\n✅ Smoke OK — la couche queries fonctionne contre Supabase.');
 }

@@ -139,7 +139,7 @@ export type AggregatedAdminData = {
  * "Aujourd'hui" de référence.
  * En production : la vraie date du jour (new Date()).
  * En tests/démo : on peut figer la date via la variable d'env CREW_REFERENCE_TODAY
- * (ISO 8601, ex: "2025-06-17T08:00:00Z") pour garder les fixtures déterministes.
+ * (ISO 8601, ex: "2026-06-09T08:00:00Z") pour garder les tests déterministes.
  */
 export const getReferenceToday = (): Date => {
   const override = process.env.CREW_REFERENCE_TODAY;

@@ -28,8 +28,6 @@ const matchFilter = (service: ServiceListItem, filter: Filter, today: Date) => {
   return true;
 };
 
-const TODAY = new Date('2025-06-17');
-
 const statusBadge = (service: ServiceListItem) => {
   if (service.status === 'draft') return { text: 'Brouillon', cls: 'bg-[var(--color-warning-bg)] text-[var(--color-warning-fg)]' };
   if (service.status === 'completed') return { text: 'Terminé', cls: 'bg-[var(--color-border-soft)] text-[var(--color-text-secondary)]' };
@@ -47,7 +45,7 @@ const eventTypeLabel = (type: string) => {
 
 export function ServicesList({ services }: { services: ServiceListItem[] }) {
   const [filter, setFilter] = useState<Filter>('Tous');
-  const filtered = useMemo(() => services.filter(s => matchFilter(s, filter, TODAY)), [services, filter]);
+  const filtered = useMemo(() => services.filter(s => matchFilter(s, filter, new Date())), [services, filter]);
 
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-5 pb-6">

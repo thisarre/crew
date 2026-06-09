@@ -1,11 +1,35 @@
 import { describe, expect, it } from 'vitest';
 
-import { getMemberValidationData } from '@/data/member-validation';
+import type { MemberValidationData } from '@/data/member-validation';
 import { useValidationFlow } from '@/hooks/use-validation-flow';
 import { renderHook, act } from '@testing-library/react';
 
 describe('useValidationFlow', () => {
-  const data = getMemberValidationData();
+  const data: MemberValidationData = {
+    profileName: 'Isaac',
+    monthLabel: 'Juin 2026',
+    weekdays: ['L', 'M', 'M', 'J', 'V', 'S', 'D'],
+    calendar: [
+      { value: 14, type: 'sunday_service', status: 'pending', eventId: 'evt-sunday-14' },
+    ],
+    events: [
+      {
+        id: 'evt-sunday-14',
+        label: 'Culte dimanche',
+        dateLabel: 'Dimanche 14 juin',
+        info: 'Arrivée 13h30 · Sono · Salle principale',
+        teammates: [],
+        theme: 'Thème à définir',
+        type: 'sunday_service',
+        calendarDay: 14,
+        status: 'pending',
+      },
+    ],
+    progress: {
+      validatedCount: 0,
+      total: 1,
+    },
+  };
 
   it('increments validated count and calendar status when swiping right', () => {
     const { result } = renderHook(() => useValidationFlow(data));

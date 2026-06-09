@@ -12,7 +12,7 @@ import { proposeTeam } from '@/lib/ai/propose-team';
 import { draftMessage } from '@/lib/ai/message-draft';
 import { suggestSpiritualContent } from '@/lib/ai/spiritual-suggest';
 import { SERVICE_IDS, SLOT_IDS } from '@/data/admin-seed';
-import { PROFILE_IDS, SKILL_IDS } from '@/data/seed';
+import { SKILL_IDS } from '@/data/seed';
 
 const getClient = () => createMockSupabaseClient() as unknown as SupabaseServerClient;
 
@@ -23,16 +23,14 @@ beforeEach(() => {
 
 describe('ai helpers (mock mode)', () => {
   describe('rankReplacementCandidates', () => {
-    it('classe les candidats pour le slot Diffusion du 23 juin, exclut Dave (cancelled) et apprentis', async () => {
+    it('classe les candidats pour le slot Diffusion du 14 juin et exclut les apprentis', async () => {
       const ctx = await loadAdminContext(getClient());
       const ranked = rankReplacementCandidates({
         ctx,
-        serviceId: SERVICE_IDS.june23,
-        slotId: SLOT_IDS.s23_diffusion,
-        cancelledProfileId: PROFILE_IDS.dave,
+        serviceId: SERVICE_IDS.june14,
+        slotId: SLOT_IDS.s14_diffusion,
       });
       const names = ranked.map(r => r.name);
-      expect(names).not.toContain('Dave');
       expect(names).not.toContain('Stéphanie'); // apprentie
       // Chrisciana est autonome diffusion → devrait être présente
       expect(names).toContain('Chrisciana');
@@ -44,9 +42,8 @@ describe('ai helpers (mock mode)', () => {
       const ctx = await loadAdminContext(getClient());
       const result = await proposeReplacement({
         ctx,
-        serviceId: SERVICE_IDS.june23,
-        slotId: SLOT_IDS.s23_diffusion,
-        cancelledProfileId: PROFILE_IDS.dave,
+        serviceId: SERVICE_IDS.june14,
+        slotId: SLOT_IDS.s14_diffusion,
       });
       expect(result).not.toBeNull();
       expect(result!.best.name).toBeDefined();
@@ -58,7 +55,7 @@ describe('ai helpers (mock mode)', () => {
       const ctx = await loadAdminContext(getClient());
       const result = await proposeReplacement({
         ctx,
-        serviceId: SERVICE_IDS.june23,
+        serviceId: SERVICE_IDS.june14,
         slotId: 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee', // slot inexistant
       });
       expect(result).toBeNull();
@@ -112,7 +109,7 @@ describe('ai helpers (mock mode)', () => {
       const draft = await draftMessage({
         kind: 'cancelled',
         profileName: 'Dave',
-        context: { serviceDateLabel: '23 juin', slotLabel: 'Diffusion' },
+        context: { serviceDateLabel: '14 juin', slotLabel: 'Diffusion' },
       });
       expect(draft.body).toMatch(/Dave/i);
     });

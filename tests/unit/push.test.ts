@@ -5,7 +5,8 @@ import type { SupabaseServerClient } from '@/lib/supabase/server';
 import { notifyProfiles, notifyServiceAssignees } from '@/lib/push/notify';
 import type { StoredSubscription } from '@/lib/push/send';
 import { PROFILE_IDS } from '@/data/seed';
-import { SERVICE_IDS } from '@/data/admin-seed';
+import { SERVICE_IDS, SLOT_IDS } from '@/data/admin-seed';
+import { assignToSlot } from '@/lib/mutations/assignments';
 
 // Mock du module send : on évite les vrais appels web-push pendant les tests
 vi.mock('@/lib/push/send', async () => {
@@ -43,16 +44,23 @@ describe('push notify', () => {
 
   it('notifyServiceAssignees retourne la liste de profils visés (vide si pas de subs)', async () => {
     const client = getClient();
-    const result = await notifyServiceAssignees(client, SERVICE_IDS.june23, {
+    await assignToSlot(client, {
+      serviceId: SERVICE_IDS.june14,
+      slotId: SLOT_IDS.s14_sono,
+      profileId: PROFILE_IDS.isaac,
+    });
+    await assignToSlot(client, {
+      serviceId: SERVICE_IDS.june14,
+      slotId: SLOT_IDS.s14_camera,
+      profileId: PROFILE_IDS.chana,
+    });
+    const result = await notifyServiceAssignees(client, SERVICE_IDS.june14, {
       title: 'Service publié',
-      body: 'Tu sers dimanche 23 juin',
+      body: 'Tu sers dimanche 14 juin',
       url: '/dashboard',
     });
-    // 23 juin a Isaac (sono), Chana (camera), Stéphanie (camera trainee) en présent
     expect(result.profileIds).toContain(PROFILE_IDS.isaac);
     expect(result.profileIds).toContain(PROFILE_IDS.chana);
-    expect(result.profileIds).toContain(PROFILE_IDS.stephanie);
-    // Dave est cancelled → exclu
     expect(result.profileIds).not.toContain(PROFILE_IDS.dave);
     // attempted = 0 car pas de push_subscriptions seedées
     expect(result.attempted).toBe(0);

@@ -55,25 +55,25 @@ export type DashboardData = {
   } | null;
 };
 
-export const MOCK_NEXT_EVENT_DATE = '2025-06-22T12:00:00Z';
+export const MOCK_NEXT_EVENT_DATE = '2026-06-14T12:00:00Z';
 
 const buildCalendarDays = (): CalendarDay[] => {
-  const placeholders = Array<CalendarDay>(5).fill({});
+  const placeholders: CalendarDay[] = [];
   const days: CalendarDay[] = [
     { value: 1 },
-    { value: 2, type: 'sunday_service' },
+    { value: 2 },
     { value: 3 },
     { value: 4 },
-    { value: 5, type: 'team_call' },
+    { value: 5 },
     { value: 6 },
     { value: 7 },
     { value: 8 },
-    { value: 9, type: 'sunday_service' },
+    { value: 9, isToday: true },
     { value: 10 },
     { value: 11 },
     { value: 12 },
     { value: 13 },
-    { value: 14 },
+    { value: 14, type: 'sunday_service' },
     { value: 15 },
     { value: 16, type: 'sunday_service' },
     { value: 17 },
@@ -82,14 +82,14 @@ const buildCalendarDays = (): CalendarDay[] => {
     { value: 20 },
     { value: 21 },
     { value: 22 },
-    { value: 23, type: 'sunday_service', isToday: true },
+    { value: 23 },
     { value: 24 },
-    { value: 25, type: 'midweek_service' },
+    { value: 25 },
     { value: 26 },
     { value: 27 },
     { value: 28 },
     { value: 29 },
-    { value: 30, type: 'sunday_service' },
+    { value: 30 },
   ];
 
   return [...placeholders, ...days];
@@ -125,8 +125,8 @@ export const getMemberDashboardData = (
       : {
           needsAction: true,
           monthLabel: 'Valide ton mois de juin',
-          description: '5 engagements prévus · tu es présent par défaut, ajuste si besoin',
-          totalEngagements: 5,
+          description: 'Aucun engagement pour le moment',
+          totalEngagements: 0,
           buttonLabel: 'Voir et valider',
         },
     weeklyThought: {
@@ -135,7 +135,7 @@ export const getMemberDashboardData = (
       reference: '1 Pierre 4:10',
     },
     calendar: {
-      monthLabel: 'Juin 2025',
+      monthLabel: 'Juin 2026',
       weekdays: WEEKDAYS,
       days: buildCalendarDays(),
       legend: [
@@ -145,15 +145,12 @@ export const getMemberDashboardData = (
       ],
     },
     nextEvent: {
-      countdownLabel: 'Dans 4 jours',
+      countdownLabel: 'Dans 5 jours',
       skillBadge: 'Sono',
-      title: 'Dimanche 22 juin',
+      title: 'Dimanche 14 juin',
       details: 'Arrivée 13h30 · Salle principale',
-      teammates: [
-        { initials: 'C', color: '#96D8D0', name: 'Chana' },
-        { initials: 'D', color: '#D2B4F1', name: 'Dave' },
-      ],
-      theme: "Thème · L'unité",
+      teammates: [],
+      theme: 'Thème à définir',
       heroIcon: 'headphones',
       heroColor: '#96D8D0',
       arrivalTime: '13h30',
