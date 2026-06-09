@@ -3,7 +3,7 @@ import { z } from 'zod';
 
 import { getSessionFromRequest } from '@/lib/auth/session';
 import { updateSlotPositionsRequired } from '@/lib/mutations/services';
-import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/server';
 
 const Body = z.object({
   positionsRequired: z.number().int().min(1).max(20),
@@ -26,11 +26,16 @@ export async function PATCH(request: Request, context: { params: { id: string } 
   }
 
   try {
-    const supabase = createClient();
+    const supabase = createServiceClient();
     const result = await updateSlotPositionsRequired(supabase, context.params.id, payload.positionsRequired);
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'unknown_error';
+    const message =
+      err instanceof Error
+        ? err.message
+        : typeof err === 'object' && err && 'message' in err && typeof err.message === 'string'
+          ? err.message
+          : 'slot_update_failed';
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }
