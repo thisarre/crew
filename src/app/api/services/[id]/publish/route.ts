@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/server';
 import { getSessionFromRequest } from '@/lib/auth/session';
 import { publishService } from '@/lib/mutations/services';
 import { notifyServiceAssignees } from '@/lib/push/notify';
@@ -17,7 +17,7 @@ export async function POST(_request: Request, context: { params: { id: string } 
   }
 
   try {
-    const supabase = createClient();
+    const supabase = createServiceClient();
 
     // Fetch service pour construire la notif
     const { data: service, error: serviceErr } = await supabase
@@ -50,7 +50,12 @@ export async function POST(_request: Request, context: { params: { id: string } 
 
     return NextResponse.json({ ok: true, publishedAt, notification });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'unknown_error';
+    const message =
+      err instanceof Error
+        ? err.message
+        : typeof err === 'object' && err && 'message' in err && typeof err.message === 'string'
+          ? err.message
+          : 'service_publish_failed';
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/server';
 import { getSessionFromRequest } from '@/lib/auth/session';
 import { cancelService, reactivateService } from '@/lib/mutations/services';
 import { notifyProfiles } from '@/lib/push/notify';
@@ -25,7 +25,7 @@ export async function POST(request: Request, context: { params: { id: string } }
   if (body && body.action === 'reactivate') action = 'reactivate';
 
   try {
-    const supabase = createClient();
+    const supabase = createServiceClient();
 
     const { data: service, error: serviceErr } = await supabase
       .from('services')
@@ -75,7 +75,12 @@ export async function POST(request: Request, context: { params: { id: string } }
       notified,
     });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'unknown_error';
+    const message =
+      err instanceof Error
+        ? err.message
+        : typeof err === 'object' && err && 'message' in err && typeof err.message === 'string'
+          ? err.message
+          : 'service_cancel_failed';
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }

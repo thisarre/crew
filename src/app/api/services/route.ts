@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/server';
 import { getSessionFromRequest } from '@/lib/auth/session';
 import { createService } from '@/lib/mutations/services';
 
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
   }
 
   try {
-    const supabase = createClient();
+    const supabase = createServiceClient();
     const created = await Promise.all(
       payload.dates.map(date =>
         createService(supabase, {
@@ -58,7 +58,12 @@ export async function POST(request: Request) {
     );
     return NextResponse.json({ ok: true, services: created });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'unknown_error';
+    const message =
+      err instanceof Error
+        ? err.message
+        : typeof err === 'object' && err && 'message' in err && typeof err.message === 'string'
+          ? err.message
+          : 'service_create_failed';
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }
