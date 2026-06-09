@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 
-import { createClient } from '@/lib/supabase/server';
+import { createServiceClient } from '@/lib/supabase/server';
 import { getSessionFromRequest } from '@/lib/auth/session';
 import { assignToSlot, cancelAssignment, SlotFullError } from '@/lib/mutations/assignments';
 
@@ -35,14 +35,19 @@ export async function POST(request: Request) {
   }
 
   try {
-    const supabase = createClient();
+    const supabase = createServiceClient();
     const result = await assignToSlot(supabase, payload);
     return NextResponse.json({ ok: true, ...result });
   } catch (err) {
     if (err instanceof SlotFullError) {
       return NextResponse.json({ ok: false, error: 'Ce poste est déjà pourvu' }, { status: 409 });
     }
-    const message = err instanceof Error ? err.message : 'unknown_error';
+    const message =
+      err instanceof Error
+        ? err.message
+        : typeof err === 'object' && err && 'message' in err && typeof err.message === 'string'
+          ? err.message
+          : 'assignment_insert_failed';
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }
@@ -61,11 +66,16 @@ export async function DELETE(request: Request) {
   }
 
   try {
-    const supabase = createClient();
+    const supabase = createServiceClient();
     await cancelAssignment(supabase, payload.assignmentId, payload.reason);
     return NextResponse.json({ ok: true });
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'unknown_error';
+    const message =
+      err instanceof Error
+        ? err.message
+        : typeof err === 'object' && err && 'message' in err && typeof err.message === 'string'
+          ? err.message
+          : 'assignment_cancel_failed';
     return NextResponse.json({ ok: false, error: message }, { status: 500 });
   }
 }

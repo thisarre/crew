@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 
-import { createMockSupabaseClient } from '@/lib/supabase/mock';
+import { __resetMockData, createMockSupabaseClient } from '@/lib/supabase/mock';
 import type { SupabaseServerClient } from '@/lib/supabase/server';
 import {
   buildAdminDashboard,
@@ -11,11 +11,15 @@ import {
   loadAdminContext,
 } from '@/lib/queries/admin';
 import { PROFILE_IDS } from '@/data/seed';
-import { SERVICE_IDS } from '@/data/admin-seed';
+import { SERVICE_IDS, SLOT_IDS } from '@/data/admin-seed';
+import { updateSlotPositionsRequired } from '@/lib/mutations/services';
+import { assignToSlot } from '@/lib/mutations/assignments';
 
 const getClient = () => createMockSupabaseClient() as unknown as SupabaseServerClient;
 
 describe('admin queries', () => {
+  beforeEach(() => __resetMockData());
+
   it('loadAdminContext expose un planning initial vide sauf le culte du 14 juin', async () => {
     const ctx = await loadAdminContext(getClient());
     expect(ctx.profiles.length).toBeGreaterThan(0);
@@ -74,6 +78,31 @@ describe('admin queries', () => {
     expect(june14?.hasAlert).toBe(true);
     expect(june14?.filledCount).toBe(0);
     expect(june14?.totalSlots).toBe(3);
+  });
+
+  it('buildServicesList compte les places réelles quand un poste demande deux personnes', async () => {
+    const client = getClient();
+    await updateSlotPositionsRequired(client, SLOT_IDS.s14_sono, 2);
+    await assignToSlot(client, {
+      serviceId: SERVICE_IDS.june14,
+      slotId: SLOT_IDS.s14_sono,
+      profileId: PROFILE_IDS.isaac,
+    });
+    await assignToSlot(client, {
+      serviceId: SERVICE_IDS.june14,
+      slotId: SLOT_IDS.s14_sono,
+      profileId: PROFILE_IDS.gloria,
+    });
+
+    const ctx = await loadAdminContext(client);
+    const detail = buildServiceDetail(ctx, SERVICE_IDS.june14);
+    expect(detail?.totalSlots).toBe(4);
+    expect(detail?.filledCount).toBe(2);
+
+    const list = buildServicesList(ctx);
+    const june14 = list.find(s => s.id === SERVICE_IDS.june14);
+    expect(june14?.filledCount).toBe(2);
+    expect(june14?.totalSlots).toBe(4);
   });
 
   it('buildMemberDetail retourne un statut neutre au départ', async () => {

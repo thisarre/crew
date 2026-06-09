@@ -822,9 +822,13 @@ export const buildServicesList = (ctx: AggregatedAdminData): ServiceListItem[] =
   return ctx.services.map(service => {
     const serviceSlots = ctx.slots.filter(sl => sl.service_id === service.id);
     const serviceAssignments = ctx.assignments.filter(a => a.service_id === service.id);
-    const filled = serviceSlots.filter(slot =>
-      serviceAssignments.some(a => a.slot_id === slot.id && a.status === 'present'),
-    ).length;
+    const filled = serviceSlots.reduce((sum, slot) => {
+      const titulars = serviceAssignments.filter(
+        a => a.slot_id === slot.id && a.status === 'present' && !a.is_trainee,
+      ).length;
+      return sum + Math.min(titulars, slot.positions_required ?? 1);
+    }, 0);
+    const total = serviceSlots.reduce((sum, slot) => sum + (slot.positions_required ?? 1), 0);
     const hasCancelled = serviceAssignments.some(a => a.status === 'cancelled');
     return {
       id: service.id,
@@ -834,8 +838,8 @@ export const buildServicesList = (ctx: AggregatedAdminData): ServiceListItem[] =
       status: service.status,
       eventType: service.event_type,
       filledCount: filled,
-      totalSlots: serviceSlots.length,
-      hasAlert: filled < serviceSlots.length || hasCancelled,
+      totalSlots: total,
+      hasAlert: filled < total || hasCancelled,
     };
   });
 };
