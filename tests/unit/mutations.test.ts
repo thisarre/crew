@@ -157,6 +157,40 @@ describe('mutations layer', () => {
     ).rejects.toBeInstanceOf(SlotFullError);
   });
 
+  it('assignToSlot compte aussi les apprentis dans la capacité du poste', async () => {
+    const client = getClient();
+    const { serviceId, slotIds } = await createService(client, {
+      eventType: 'sunday_service',
+      serviceDate: '2026-07-05',
+      startTime: '14:00',
+      arrivalTime: '13:30',
+      location: 'Salle principale',
+      slotSkillIds: [SKILL_IDS.camera],
+      slotPositions: { [SKILL_IDS.camera]: 2 },
+    });
+    const [slotId] = slotIds;
+
+    await assignToSlot(client, {
+      serviceId,
+      slotId,
+      profileId: PROFILE_IDS.chana,
+    });
+    await assignToSlot(client, {
+      serviceId,
+      slotId,
+      profileId: PROFILE_IDS.stephanie,
+      isTrainee: true,
+    });
+
+    await expect(
+      assignToSlot(client, {
+        serviceId,
+        slotId,
+        profileId: PROFILE_IDS.gloria,
+      }),
+    ).rejects.toBeInstanceOf(SlotFullError);
+  });
+
   it('cancelAssignment marque une ligne existante comme cancelled', async () => {
     const client = getClient();
     const { assignmentId } = await assignToSlot(client, {

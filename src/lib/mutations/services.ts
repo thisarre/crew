@@ -127,8 +127,8 @@ export async function updateSlotPositionsRequired(
     .eq('slot_id', slotId);
   if (assignmentsErr) throw assignmentsErr;
 
-  const presentTitulars = (assignments ?? []).filter(a => a.status === 'present' && !a.is_trainee).length;
-  const nextPositionsRequired = Math.max(normalizePositionsRequired(positionsRequired), presentTitulars);
+  const presentAssignments = (assignments ?? []).filter(a => a.status === 'present').length;
+  const nextPositionsRequired = Math.max(normalizePositionsRequired(positionsRequired), presentAssignments);
 
   const { data, error } = await client
     .from('service_slots')

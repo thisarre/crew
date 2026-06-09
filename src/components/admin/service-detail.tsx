@@ -382,7 +382,7 @@ function SlotCard({ slot, serviceId }: { slot: ServiceSlotDetail; serviceId: str
   const [primaryId, setPrimaryId] = useState<string | null>(null);
   const [binomeId, setBinomeId] = useState<string | 'admin' | null>(null);
   const isOpen = slot.status === 'open';
-  const presentTitulars = slot.assigned.filter(a => a.status === 'present' && !a.isTrainee).length;
+  const presentAssignees = slot.assigned.filter(a => a.status === 'present').length;
 
   const primaryCandidate = slot.candidates.find(c => c.profileId === primaryId);
   const binomeCandidates = slot.candidates.filter(c => c.profileId !== primaryId);
@@ -400,7 +400,7 @@ function SlotCard({ slot, serviceId }: { slot: ServiceSlotDetail; serviceId: str
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'same-origin',
-          body: JSON.stringify({ serviceId, slotId: slot.slotId, profileId, isTrainee, force: true }),
+          body: JSON.stringify({ serviceId, slotId: slot.slotId, profileId, isTrainee }),
         });
         const body = await res.json().catch(() => ({ ok: false, error: `HTTP ${res.status}` }));
         if (!res.ok || !body.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
@@ -434,7 +434,7 @@ function SlotCard({ slot, serviceId }: { slot: ServiceSlotDetail; serviceId: str
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'same-origin',
-          body: JSON.stringify({ serviceId, slotId: slot.slotId, profileId, isTrainee, force: true }),
+          body: JSON.stringify({ serviceId, slotId: slot.slotId, profileId, isTrainee }),
         });
         const body = await res.json().catch(() => ({ ok: false, error: `HTTP ${res.status}` }));
         if (!res.ok || !body.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
@@ -518,7 +518,7 @@ function SlotCard({ slot, serviceId }: { slot: ServiceSlotDetail; serviceId: str
           <button
             type="button"
             onClick={() => handleUpdatePositions(slot.positionsRequired - 1)}
-            disabled={updatingPositions || slot.positionsRequired <= Math.max(1, presentTitulars)}
+            disabled={updatingPositions || slot.positionsRequired <= Math.max(1, presentAssignees)}
             aria-label={`Retirer un poste ${slot.skillName}`}
             className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-[13px] font-bold text-ink disabled:opacity-40"
           >

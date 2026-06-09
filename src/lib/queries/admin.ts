@@ -640,7 +640,7 @@ export const buildServiceDetail = (
       };
     });
 
-    const filledByPresent = presentAssignments.filter(a => !a.is_trainee).length;
+    const filledByPresent = presentAssignments.length;
     const required = slot.positions_required ?? 1;
     const status: ServiceSlotDetail['status'] = filledByPresent >= required ? 'filled' : filledByPresent > 0 ? 'partial' : 'open';
 
@@ -779,12 +779,12 @@ export const buildServiceDetail = (
     .filter((id): id is string => Boolean(id));
   const validatedCount = presentProfiles.filter(id => ctx.validations.some(v => v.profile_id === id)).length;
   const filledCount = slots.reduce(
-    (sum, slot) => sum + slot.assigned.filter(a => a.status === 'present' && !a.isTrainee).length,
+    (sum, slot) => sum + slot.assigned.filter(a => a.status === 'present').length,
     0,
   );
   const totalSlots = slots.reduce((sum, slot) => sum + slot.positionsRequired, 0);
   const openSlotsCount = slots.reduce((sum, slot) => {
-    const filled = slot.assigned.filter(a => a.status === 'present' && !a.isTrainee).length;
+    const filled = slot.assigned.filter(a => a.status === 'present').length;
     return sum + Math.max(0, slot.positionsRequired - filled);
   }, 0);
 
@@ -823,10 +823,8 @@ export const buildServicesList = (ctx: AggregatedAdminData): ServiceListItem[] =
     const serviceSlots = ctx.slots.filter(sl => sl.service_id === service.id);
     const serviceAssignments = ctx.assignments.filter(a => a.service_id === service.id);
     const filled = serviceSlots.reduce((sum, slot) => {
-      const titulars = serviceAssignments.filter(
-        a => a.slot_id === slot.id && a.status === 'present' && !a.is_trainee,
-      ).length;
-      return sum + Math.min(titulars, slot.positions_required ?? 1);
+      const present = serviceAssignments.filter(a => a.slot_id === slot.id && a.status === 'present').length;
+      return sum + Math.min(present, slot.positions_required ?? 1);
     }, 0);
     const total = serviceSlots.reduce((sum, slot) => sum + (slot.positions_required ?? 1), 0);
     const hasCancelled = serviceAssignments.some(a => a.status === 'cancelled');

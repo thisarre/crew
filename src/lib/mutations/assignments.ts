@@ -23,7 +23,7 @@ export class SlotFullError extends Error {
 /**
  * Assigne un membre à un slot — idempotent et sûr :
  *  - si ce membre est déjà 'present' sur ce slot, on renvoie l'assignation existante (pas de doublon)
- *  - si le slot a déjà atteint son nombre de postes requis (hors apprentis), on refuse (SlotFullError)
+ *  - si le slot a déjà atteint son nombre de personnes requis, on refuse (SlotFullError)
  *  - sinon on crée la nouvelle assignation 'present'
  *
  * Les assignations 'cancelled' antérieures sont ignorées (on ne les réactive pas).
@@ -47,31 +47,27 @@ export async function assignToSlot(
     return { assignmentId: mine.id, alreadyAssigned: true };
   }
 
-  // Slot plein ? On compte les présents NON apprentis (le slot a positions_required titulaires)
-  if (!input.isTrainee) {
-    const { data: slot } = await client
-      .from('service_slots')
-      .select('positions_required')
-      .eq('id', input.slotId)
-      .maybeSingle();
-    const required = slot?.positions_required ?? 1;
-    const presentTitulars = rows.filter(a => a.status === 'present' && !a.is_trainee);
-    if (presentTitulars.length >= required) {
-      if (input.force) {
-        // Admin force: cancel existing titulars to make room
-        for (const existing of presentTitulars) {
-          await client
-            .from('assignments')
-            .update({
-              status: 'cancelled',
-              cancelled_at: new Date().toISOString(),
-              cancelled_reason: 'Remplacé par l\'admin',
-            })
-            .eq('id', existing.id);
-        }
-      } else {
-        throw new SlotFullError();
+  const { data: slot } = await client
+    .from('service_slots')
+    .select('positions_required')
+    .eq('id', input.slotId)
+    .maybeSingle();
+  const required = slot?.positions_required ?? 1;
+  const presentAssignments = rows.filter(a => a.status === 'present');
+  if (presentAssignments.length >= required) {
+    if (input.force) {
+      for (const existing of presentAssignments) {
+        await client
+          .from('assignments')
+          .update({
+            status: 'cancelled',
+            cancelled_at: new Date().toISOString(),
+            cancelled_reason: 'Remplacé par l\'admin',
+          })
+          .eq('id', existing.id);
       }
+    } else {
+      throw new SlotFullError();
     }
   }
 
