@@ -13,7 +13,7 @@ import {
 import { PROFILE_IDS } from '@/data/seed';
 import { SERVICE_IDS, SLOT_IDS } from '@/data/admin-seed';
 import { updateSlotPositionsRequired } from '@/lib/mutations/services';
-import { assignToSlot } from '@/lib/mutations/assignments';
+import { assignToSlot, cancelAssignment } from '@/lib/mutations/assignments';
 
 const getClient = () => createMockSupabaseClient() as unknown as SupabaseServerClient;
 
@@ -103,6 +103,35 @@ describe('admin queries', () => {
     const june14 = list.find(s => s.id === SERVICE_IDS.june14);
     expect(june14?.filledCount).toBe(2);
     expect(june14?.totalSlots).toBe(4);
+  });
+
+  it("buildServicesList n'affiche pas à pourvoir si le service est complet malgré des annulations", async () => {
+    const client = getClient();
+    await updateSlotPositionsRequired(client, SLOT_IDS.s14_sono, 2);
+    await updateSlotPositionsRequired(client, SLOT_IDS.s14_camera, 2);
+    await updateSlotPositionsRequired(client, SLOT_IDS.s14_diffusion, 2);
+
+    const cancelled = await assignToSlot(client, {
+      serviceId: SERVICE_IDS.june14,
+      slotId: SLOT_IDS.s14_camera,
+      profileId: PROFILE_IDS.stephanie,
+      isTrainee: true,
+    });
+    await cancelAssignment(client, cancelled.assignmentId, 'Test annulation');
+
+    await assignToSlot(client, { serviceId: SERVICE_IDS.june14, slotId: SLOT_IDS.s14_sono, profileId: PROFILE_IDS.isaac });
+    await assignToSlot(client, { serviceId: SERVICE_IDS.june14, slotId: SLOT_IDS.s14_sono, profileId: PROFILE_IDS.gloria });
+    await assignToSlot(client, { serviceId: SERVICE_IDS.june14, slotId: SLOT_IDS.s14_camera, profileId: PROFILE_IDS.chana });
+    await assignToSlot(client, { serviceId: SERVICE_IDS.june14, slotId: SLOT_IDS.s14_camera, profileId: PROFILE_IDS.stephanie, isTrainee: true });
+    await assignToSlot(client, { serviceId: SERVICE_IDS.june14, slotId: SLOT_IDS.s14_diffusion, profileId: PROFILE_IDS.chrisciana });
+    await assignToSlot(client, { serviceId: SERVICE_IDS.june14, slotId: SLOT_IDS.s14_diffusion, profileId: PROFILE_IDS.dave });
+
+    const ctx = await loadAdminContext(client);
+    const list = buildServicesList(ctx);
+    const june14 = list.find(s => s.id === SERVICE_IDS.june14);
+    expect(june14?.filledCount).toBe(6);
+    expect(june14?.totalSlots).toBe(6);
+    expect(june14?.hasAlert).toBe(false);
   });
 
   it('buildMemberDetail retourne un statut neutre au départ', async () => {

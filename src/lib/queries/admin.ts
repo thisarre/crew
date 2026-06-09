@@ -827,7 +827,6 @@ export const buildServicesList = (ctx: AggregatedAdminData): ServiceListItem[] =
       return sum + Math.min(present, slot.positions_required ?? 1);
     }, 0);
     const total = serviceSlots.reduce((sum, slot) => sum + (slot.positions_required ?? 1), 0);
-    const hasCancelled = serviceAssignments.some(a => a.status === 'cancelled');
     return {
       id: service.id,
       date: service.service_date,
@@ -837,7 +836,7 @@ export const buildServicesList = (ctx: AggregatedAdminData): ServiceListItem[] =
       eventType: service.event_type,
       filledCount: filled,
       totalSlots: total,
-      hasAlert: filled < total || hasCancelled,
+      hasAlert: filled < total,
     };
   });
 };
