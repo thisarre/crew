@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server';
 
+import { fetchProfiles } from '@/lib/queries/admin';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
+
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
@@ -28,16 +31,37 @@ export async function GET() {
     optionalRuntimeEnv.map(key => [key, Boolean(process.env[key])]),
   );
   const missing = requiredRuntimeEnv.filter(key => !process.env[key]);
+  const checks = {
+    supabaseAnonRead: false,
+    supabaseServiceRead: false,
+  };
+
+  try {
+    await fetchProfiles(createClient());
+    checks.supabaseAnonRead = true;
+  } catch {
+    checks.supabaseAnonRead = false;
+  }
+
+  if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    try {
+      await fetchProfiles(createServiceClient());
+      checks.supabaseServiceRead = true;
+    } catch {
+      checks.supabaseServiceRead = false;
+    }
+  }
 
   return NextResponse.json(
     {
-      ok: missing.length === 0,
+      ok: missing.length === 0 && checks.supabaseAnonRead,
       service: 'crew',
       nodeEnv: process.env.NODE_ENV,
       required,
       optional,
+      checks,
       missing,
     },
-    { status: missing.length === 0 ? 200 : 503 },
+    { status: missing.length === 0 && checks.supabaseAnonRead ? 200 : 503 },
   );
 }
