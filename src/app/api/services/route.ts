@@ -19,6 +19,7 @@ const Body = z.object({
   location: z.string().optional(),
   spiritualTheme: z.string().optional(),
   slotSkillIds: z.array(z.string().uuid()),
+  slotPositions: z.record(z.string().uuid(), z.number().int().min(1).max(20)).optional(),
   initialAssignmentsByDate: z.record(z.array(AssignmentSchema)).optional(),
 });
 
@@ -50,6 +51,7 @@ export async function POST(request: Request) {
           location: payload.location,
           spiritualTheme: payload.spiritualTheme,
           slotSkillIds: payload.slotSkillIds,
+          slotPositions: payload.slotPositions,
           initialAssignments: payload.initialAssignmentsByDate?.[date],
         }),
       ),

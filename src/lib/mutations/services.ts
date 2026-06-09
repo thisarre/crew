@@ -16,6 +16,7 @@ export type CreateServiceInput = {
   location?: string;
   spiritualTheme?: string;
   slotSkillIds: string[]; // skills à pourvoir
+  slotPositions?: Record<string, number>;
   initialAssignments?: { skillId: string; profileId: string; isTrainee?: boolean }[];
 };
 
@@ -27,6 +28,11 @@ const toSqlTime = (raw: string): string => {
   const mm = (parts[1] ?? '00').padStart(2, '0');
   const ss = (parts[2] ?? '00').padStart(2, '0');
   return `${hh}:${mm}:${ss}`;
+};
+
+const normalizePositionsRequired = (value: number | undefined): number => {
+  if (!value || !Number.isFinite(value)) return 1;
+  return Math.max(1, Math.min(20, Math.trunc(value)));
 };
 
 export async function createService(
@@ -59,7 +65,7 @@ export async function createService(
   const slotsPayload: SlotInsert[] = input.slotSkillIds.map(skillId => ({
     service_id: service.id,
     skill_id: skillId,
-    positions_required: 1,
+    positions_required: normalizePositionsRequired(input.slotPositions?.[skillId]),
   }));
   const { data: slots, error: slotsErr } = slotsPayload.length > 0
     ? await client.from('service_slots').insert(slotsPayload).select()
@@ -108,6 +114,31 @@ export async function publishService(
     .eq('id', serviceId);
   if (error) throw error;
   return { publishedAt };
+}
+
+export async function updateSlotPositionsRequired(
+  client: SupabaseServerClient,
+  slotId: string,
+  positionsRequired: number,
+): Promise<{ positionsRequired: number }> {
+  const { data: assignments, error: assignmentsErr } = await client
+    .from('assignments')
+    .select('status, is_trainee')
+    .eq('slot_id', slotId);
+  if (assignmentsErr) throw assignmentsErr;
+
+  const presentTitulars = (assignments ?? []).filter(a => a.status === 'present' && !a.is_trainee).length;
+  const nextPositionsRequired = Math.max(normalizePositionsRequired(positionsRequired), presentTitulars);
+
+  const { data, error } = await client
+    .from('service_slots')
+    .update({ positions_required: nextPositionsRequired })
+    .eq('id', slotId)
+    .select('positions_required')
+    .single();
+  if (error || !data) throw error ?? new Error('slot_update_failed');
+
+  return { positionsRequired: data.positions_required ?? nextPositionsRequired };
 }
 
 /**

@@ -36,6 +36,8 @@ const SKILLS = [
   { id: 'diffusion', skillId: 'cd34ef56-7890-ab12-cd34-ef567890ab12', label: 'Diffusion', color: '#D2B4F1', Icon: IconDeviceTv },
 ] as const;
 
+type SkillKey = (typeof SKILLS)[number]['id'];
+
 // Helpers pour générer les dimanches d'un mois donné
 function getSundays(offset: number): { date: string; iso: string; day: number; included: boolean }[] {
   const ref = new Date();
@@ -74,7 +76,12 @@ export function ServiceNew() {
   const [arrival, setArrival] = useState('13h30');
   const [duration, setDuration] = useState('45 min');
   const [customDates, setCustomDates] = useState<string[]>([]); // pour midweek/call
-  const [activeSkills, setActiveSkills] = useState<Set<string>>(new Set(['sono', 'camera', 'diffusion']));
+  const [activeSkills, setActiveSkills] = useState<Set<SkillKey>>(new Set(['sono', 'camera', 'diffusion']));
+  const [slotPositions, setSlotPositions] = useState<Record<SkillKey, number>>({
+    sono: 1,
+    camera: 1,
+    diffusion: 1,
+  });
 
   useEffect(() => {
     setSundays(getSundays(monthOffset));
@@ -125,13 +132,20 @@ export function ServiceNew() {
     setSundays(prev => prev.map(s => (s.iso === iso ? { ...s, included: !s.included } : s)));
   };
 
-  const toggleSkill = (id: string) => {
+  const toggleSkill = (id: SkillKey) => {
     setActiveSkills(prev => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
+  };
+
+  const updateSlotPosition = (id: SkillKey, delta: number) => {
+    setSlotPositions(prev => ({
+      ...prev,
+      [id]: Math.max(1, Math.min(20, prev[id] + delta)),
+    }));
   };
 
   const [submitting, setSubmitting] = useState(false);
@@ -178,6 +192,9 @@ export function ServiceNew() {
       if (dates.length === 0) {
         throw new Error('Sélectionne au moins une date');
       }
+      const slotPositionsBySkillId = Object.fromEntries(
+        SKILLS.filter(s => activeSkills.has(s.id)).map(s => [s.skillId, slotPositions[s.id]]),
+      );
 
       const res = await fetch('/api/services', {
         method: 'POST',
@@ -189,6 +206,7 @@ export function ServiceNew() {
           arrivalTime: type !== 'call' ? arrival : undefined,
           location: type === 'call' ? `Durée : ${duration}` : undefined,
           slotSkillIds: type === 'sunday' ? skillIdsActive : [],
+          slotPositions: type === 'sunday' ? slotPositionsBySkillId : undefined,
           initialAssignmentsByDate: withTeam ? initialAssignmentsByDate : undefined,
         }),
       });
@@ -365,25 +383,52 @@ export function ServiceNew() {
           <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.5px] text-[var(--color-text-secondary)]">
             Postes
           </p>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="space-y-2">
             {SKILLS.map(skill => {
               const Icon = skill.Icon;
               const active = activeSkills.has(skill.id);
               return (
-                <button
+                <div
                   key={skill.id}
-                  type="button"
-                  onClick={() => toggleSkill(skill.id)}
-                  className={`flex items-center gap-1 rounded-full px-3 py-1.5 text-[11px] font-bold transition ${
-                    active
-                      ? 'text-ink'
-                      : 'border-[1.5px] border-dashed border-[var(--color-border)] text-[var(--color-text-secondary)]'
+                  className={`flex items-center gap-2 rounded-[14px] px-3 py-2 ${
+                    active ? 'bg-white' : 'border-[1.5px] border-dashed border-[var(--color-border)]'
                   }`}
-                  style={active ? { backgroundColor: skill.color } : undefined}
                 >
-                  <Icon size={12} stroke={2} className={active ? 'text-ink' : 'text-[var(--color-text-secondary)]'} />
-                  {skill.label}
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => toggleSkill(skill.id)}
+                    className={`flex flex-1 items-center gap-1.5 rounded-full px-2.5 py-1.5 text-left text-[11px] font-bold transition ${
+                      active ? 'text-ink' : 'text-[var(--color-text-secondary)]'
+                    }`}
+                    style={active ? { backgroundColor: skill.color } : undefined}
+                  >
+                    <Icon size={12} stroke={2} className={active ? 'text-ink' : 'text-[var(--color-text-secondary)]'} />
+                    {skill.label}
+                  </button>
+                  {active && (
+                    <div className="flex items-center gap-1 rounded-full bg-[var(--color-bg)] p-1">
+                      <button
+                        type="button"
+                        onClick={() => updateSlotPosition(skill.id, -1)}
+                        disabled={slotPositions[skill.id] <= 1}
+                        className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-[13px] font-bold text-ink disabled:opacity-40"
+                      >
+                        −
+                      </button>
+                      <span className="min-w-11 text-center text-[11px] font-bold text-ink">
+                        {slotPositions[skill.id]} poste{slotPositions[skill.id] > 1 ? 's' : ''}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => updateSlotPosition(skill.id, 1)}
+                        disabled={slotPositions[skill.id] >= 20}
+                        className="flex h-6 w-6 items-center justify-center rounded-full bg-ink text-[13px] font-bold text-white disabled:opacity-40"
+                      >
+                        +
+                      </button>
+                    </div>
+                  )}
+                </div>
               );
             })}
           </div>

@@ -543,6 +543,7 @@ export type ServiceSlotDetail = {
     avatarColor: string;
     level: MemberSkillRow['level'] | null;
     status: AssignmentRow['status'];
+    isTrainee: boolean;
     cancelledHoursAgo: number | null;
   }[];
   status: 'filled' | 'open' | 'partial';
@@ -634,17 +635,18 @@ export const buildServiceDetail = (
         avatarColor: profile?.avatar_color ?? '#96D8D0',
         level: memberSkill?.level ?? null,
         status: a.status,
+        isTrainee: a.is_trainee ?? false,
         cancelledHoursAgo,
       };
     });
 
-    const filledByPresent = presentAssignments.length;
+    const filledByPresent = presentAssignments.filter(a => !a.is_trainee).length;
     const required = slot.positions_required ?? 1;
     const status: ServiceSlotDetail['status'] = filledByPresent >= required ? 'filled' : filledByPresent > 0 ? 'partial' : 'open';
 
     // Proposition IA simple : meilleur match si slot open
     let aiProposal: ServiceSlotDetail['aiProposal'] = null;
-    if (status === 'open' && skill) {
+    if (status !== 'filled' && skill) {
       const occupiedProfileIds = new Set(presentAssignments.map(a => a.profile_id));
       // Aussi exclure les cancelled de ce slot pour éviter de re-proposer Dave qui a annulé
       const cancelledProfileIds = new Set(cancelledAssignments.map(a => a.profile_id));
@@ -776,8 +778,15 @@ export const buildServiceDetail = (
     .map(a => a.profile_id)
     .filter((id): id is string => Boolean(id));
   const validatedCount = presentProfiles.filter(id => ctx.validations.some(v => v.profile_id === id)).length;
-  const filledCount = slots.filter(s => s.status === 'filled').length;
-  const openSlotsCount = slots.filter(s => s.status === 'open' || s.status === 'partial').length;
+  const filledCount = slots.reduce(
+    (sum, slot) => sum + slot.assigned.filter(a => a.status === 'present' && !a.isTrainee).length,
+    0,
+  );
+  const totalSlots = slots.reduce((sum, slot) => sum + slot.positionsRequired, 0);
+  const openSlotsCount = slots.reduce((sum, slot) => {
+    const filled = slot.assigned.filter(a => a.status === 'present' && !a.isTrainee).length;
+    return sum + Math.max(0, slot.positionsRequired - filled);
+  }, 0);
 
   return {
     service,
@@ -787,7 +796,7 @@ export const buildServiceDetail = (
     arrivalLabel: (service.arrival_time ?? '').slice(0, 5).replace(':', 'h'),
     validatedCount,
     filledCount,
-    totalSlots: slots.length,
+    totalSlots,
     cancelledCount: serviceAssignments.filter(a => a.status === 'cancelled').length,
     slots,
     isPublishable: openSlotsCount === 0,

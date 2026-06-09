@@ -119,6 +119,7 @@ export function ServiceDetail({ data }: { data: ServiceDetailData }) {
     setDuplicating(true);
     try {
       const skillIds = data.slots.map(s => s.skillId);
+      const slotPositions = Object.fromEntries(data.slots.map(s => [s.skillId, s.positionsRequired]));
       const res = await fetch('/api/services', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -131,6 +132,7 @@ export function ServiceDetail({ data }: { data: ServiceDetailData }) {
           location: data.service.location ?? undefined,
           spiritualTheme: data.service.spiritual_theme ?? undefined,
           slotSkillIds: skillIds,
+          slotPositions,
         }),
       });
       const body = await res.json().catch(() => ({ ok: false, error: `HTTP ${res.status}` }));
@@ -375,10 +377,12 @@ function SlotCard({ slot, serviceId }: { slot: ServiceSlotDetail; serviceId: str
   const router = useRouter();
   const [assigning, setAssigning] = useState(false);
   const [assignError, setAssignError] = useState<string | null>(null);
+  const [updatingPositions, setUpdatingPositions] = useState(false);
   const [manualMode, setManualMode] = useState(false);
   const [primaryId, setPrimaryId] = useState<string | null>(null);
   const [binomeId, setBinomeId] = useState<string | 'admin' | null>(null);
   const isOpen = slot.status === 'open';
+  const presentTitulars = slot.assigned.filter(a => a.status === 'present' && !a.isTrainee).length;
 
   const primaryCandidate = slot.candidates.find(c => c.profileId === primaryId);
   const binomeCandidates = slot.candidates.filter(c => c.profileId !== primaryId);
@@ -474,6 +478,27 @@ function SlotCard({ slot, serviceId }: { slot: ServiceSlotDetail; serviceId: str
     }
   };
 
+  const handleUpdatePositions = async (next: number) => {
+    if (updatingPositions) return;
+    setAssignError(null);
+    setUpdatingPositions(true);
+    try {
+      const res = await fetch(`/api/service-slots/${slot.slotId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify({ positionsRequired: next }),
+      });
+      const body = await res.json().catch(() => ({ ok: false, error: `HTTP ${res.status}` }));
+      if (!res.ok || !body.ok) throw new Error(body.error ?? `HTTP ${res.status}`);
+      router.refresh();
+    } catch (err) {
+      setAssignError(err instanceof Error ? err.message : 'unknown_error');
+    } finally {
+      setUpdatingPositions(false);
+    }
+  };
+
   return (
     <motion.div variants={fadeUp} className={cardClass}>
       <div className="mb-3 flex items-center gap-2.5">
@@ -488,6 +513,27 @@ function SlotCard({ slot, serviceId }: { slot: ServiceSlotDetail; serviceId: str
           <p className="text-[11px] text-[var(--color-text-secondary)]">
             {slot.positionsRequired} personne{slot.positionsRequired > 1 ? 's' : ''} · autonomie requise
           </p>
+        </div>
+        <div className="flex items-center gap-1 rounded-full bg-[var(--color-bg)] p-1">
+          <button
+            type="button"
+            onClick={() => handleUpdatePositions(slot.positionsRequired - 1)}
+            disabled={updatingPositions || slot.positionsRequired <= Math.max(1, presentTitulars)}
+            aria-label={`Retirer un poste ${slot.skillName}`}
+            className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-[13px] font-bold text-ink disabled:opacity-40"
+          >
+            −
+          </button>
+          <span className="min-w-5 text-center text-[11px] font-bold text-ink">{slot.positionsRequired}</span>
+          <button
+            type="button"
+            onClick={() => handleUpdatePositions(slot.positionsRequired + 1)}
+            disabled={updatingPositions || slot.positionsRequired >= 20}
+            aria-label={`Ajouter un poste ${slot.skillName}`}
+            className="flex h-6 w-6 items-center justify-center rounded-full bg-ink text-[13px] font-bold text-white disabled:opacity-40"
+          >
+            +
+          </button>
         </div>
         {slot.status === 'filled' && (
           <span className="flex items-center gap-1 rounded-full bg-[var(--color-sage)] px-2 py-1">
