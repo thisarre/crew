@@ -77,15 +77,15 @@ const resolveServerConnection = (options: CreateClientOptions) => {
       : { url: configuredUrl, key: anonKey };
   }
 
-  if (configuredRef && anonRef && configuredRef === anonRef) {
-    return { url: configuredUrl, key: anonKey };
+  // Production safety net: if Netlify's public Supabase env vars point to
+  // the wrong project, server rendering can still use the correctly scoped
+  // service key without exposing it to the browser.
+  if (serviceKey && serviceRef && configuredRef !== serviceRef) {
+    return { url: getProjectUrl(serviceRef), key: serviceKey };
   }
 
-  // Production safety net: if Netlify's public Supabase env vars point to
-  // different project, server rendering can still use the correctly scoped
-  // service key without exposing it to the browser.
-  if (serviceKey && serviceRef) {
-    return { url: getProjectUrl(serviceRef), key: serviceKey };
+  if (configuredRef && anonRef && configuredRef === anonRef) {
+    return { url: configuredUrl, key: anonKey };
   }
 
   return { url: configuredUrl, key: anonKey };
