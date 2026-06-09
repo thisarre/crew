@@ -35,6 +35,9 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# Supabase NAS self-hosting (stack officielle téléchargée + données/secrets)
+/infra/supabase-nas/stack/
+
 # sauvegardes de base (peuvent contenir des données sensibles : clés push, etc.)
 /backups/
 

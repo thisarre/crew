@@ -13,6 +13,7 @@ import {
   IconCalendar,
   IconHeadphones,
   IconHeart,
+  IconLogout,
   IconX,
 } from '@tabler/icons-react';
 
@@ -54,6 +55,7 @@ export function MemberDashboard({ data, nextAssignment = null }: MemberDashboard
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const handleCancelNext = async () => {
     if (!nextAssignment || cancelling) return;
@@ -72,6 +74,17 @@ export function MemberDashboard({ data, nextAssignment = null }: MemberDashboard
       setCancelError(err instanceof Error ? err.message : 'unknown_error');
     } finally {
       setCancelling(false);
+    }
+  };
+
+  const handleChangeProfile = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+      window.location.href = '/';
+    } catch {
+      setLoggingOut(false);
     }
   };
 
@@ -101,14 +114,26 @@ export function MemberDashboard({ data, nextAssignment = null }: MemberDashboard
           <p className="text-[28px] font-bold leading-[1.1] tracking-[-0.5px] text-ink">Hey {data.profile.name}</p>
           <p className="mt-1.5 text-[14px] text-[var(--color-text-secondary)]">{data.profile.subtitle}</p>
         </div>
-        <div className="relative">
-          <div
-            className="flex h-11 w-11 items-center justify-center rounded-full text-[16px] font-semibold text-ink"
-            style={{ backgroundColor: data.profile.avatarColor }}
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleChangeProfile}
+            disabled={loggingOut}
+            className="flex h-10 items-center gap-1.5 rounded-full bg-white px-3 text-[12px] font-semibold text-[var(--color-text-secondary)] shadow-sm transition active:scale-[0.98] disabled:opacity-60"
+            aria-label="Changer d'utilisateur"
           >
-            {data.profile.initials}
+            <IconLogout size={15} stroke={2} />
+            <span>{loggingOut ? '...' : 'Changer'}</span>
+          </button>
+          <div className="relative">
+            <div
+              className="flex h-11 w-11 items-center justify-center rounded-full text-[16px] font-semibold text-ink"
+              style={{ backgroundColor: data.profile.avatarColor }}
+            >
+              {data.profile.initials}
+            </div>
+            <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-[var(--color-bg)] bg-[var(--color-sage)] animate-pulse-dot" />
           </div>
-          <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-[var(--color-bg)] bg-[var(--color-sage)] animate-pulse-dot" />
         </div>
       </motion.section>
 

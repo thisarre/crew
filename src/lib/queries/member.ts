@@ -37,6 +37,19 @@ const skillTeammateLabel = (skillName: string | undefined): string => {
   return skillName;
 };
 
+const formatTimeAgoFr = (iso: string | null, now: Date): string => {
+  if (!iso) return '';
+  const diffMs = Math.max(0, now.getTime() - new Date(iso).getTime());
+  const minutes = Math.floor(diffMs / 60000);
+  if (minutes < 60) return minutes <= 1 ? "à l'instant" : `il y a ${minutes} min`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `il y a ${hours} h`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `il y a ${days} jour${days > 1 ? 's' : ''}`;
+  const weeks = Math.floor(days / 7);
+  return `il y a ${weeks} semaine${weeks > 1 ? 's' : ''}`;
+};
+
 export type LoadMemberValidationOptions = {
   year: number;
   month: number;
@@ -324,39 +337,25 @@ export async function loadMemberDashboard(
     };
   }
 
-  // --- Appreciation contextuelle basée sur l'activité récente ---
-  const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 3600 * 1000);
-  const fourWeeksAgo = new Date(now.getTime() - 28 * 24 * 3600 * 1000);
-
-  const pastAssignments = ctx.assignments
-    .filter(a => a.profile_id === profileId && a.status === 'present')
-    .map(a => {
-      const service = ctx.services.find(s => s.id === a.service_id);
-      return service ? new Date(service.service_date).getTime() : null;
-    })
-    .filter((t): t is number => t !== null && t < now.getTime())
-    .sort((a, b) => b - a);
-
-  const lastServed = pastAssignments[0] ?? 0;
-  const hasUpcoming = Boolean(nextEvent);
-
-  let appreciationMessage: string;
-  if (lastServed >= twoWeeksAgo.getTime()) {
-    appreciationMessage = 'Merci pour ton engagement lors du dernier service !';
-  } else if (hasUpcoming) {
-    appreciationMessage = 'On compte sur toi pour le prochain service !';
-  } else if (lastServed > 0 && lastServed < fourWeeksAgo.getTime()) {
-    appreciationMessage = 'Tu nous manques ! On espère te revoir bientôt.';
-  } else {
-    appreciationMessage = "Merci de faire partie de l'équipe Crew !";
-  }
-
-  const appreciation: DashboardData['appreciation'] = {
-    message: appreciationMessage,
-    author: "L'équipe Crew",
-    timeAgo: '',
-    avatar: { initials: 'C', color: '#DAF4AA' },
-  };
+  // --- Dernière appréciation reçue ---
+  const latestAppreciation = ctx.appreciations
+    .filter(a => a.to_profile_id === profileId)
+    .filter(a => !a.created_at || new Date(a.created_at).getTime() <= now.getTime())
+    .sort((a, b) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime())[0];
+  const appreciationAuthor = latestAppreciation?.from_profile_id
+    ? ctx.profiles.find(p => p.id === latestAppreciation.from_profile_id)
+    : null;
+  const appreciation: DashboardData['appreciation'] = latestAppreciation
+    ? {
+        message: latestAppreciation.content,
+        author: appreciationAuthor?.display_name ?? "L'équipe Crew",
+        timeAgo: formatTimeAgoFr(latestAppreciation.created_at, now),
+        avatar: {
+          initials: appreciationAuthor?.initials ?? 'C',
+          color: appreciationAuthor?.avatar_color ?? '#DAF4AA',
+        },
+      }
+    : null;
 
   return {
     profile: { id: profileId, name, initials, avatarColor, subtitle },

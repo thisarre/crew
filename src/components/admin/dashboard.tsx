@@ -11,6 +11,7 @@ import {
   IconCopy,
   IconDeviceTv,
   IconHeadphones,
+  IconLogout,
   IconPlus,
   IconSparkles,
   IconUser,
@@ -45,6 +46,18 @@ type AdminDashboardProps = {
 
 export function AdminDashboard({ data }: AdminDashboardProps) {
   const [activeAlert, setActiveAlert] = useState<AdminAlert | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  const handleChangeProfile = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' });
+      window.location.href = '/';
+    } catch {
+      setLoggingOut(false);
+    }
+  };
 
   return (
     <motion.div variants={containerVariants} initial="hidden" animate="visible" className="space-y-4 pb-6">
@@ -60,6 +73,16 @@ export function AdminDashboard({ data }: AdminDashboardProps) {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleChangeProfile}
+            disabled={loggingOut}
+            className="flex h-10 items-center gap-1.5 rounded-full bg-white px-3 text-[12px] font-semibold text-[var(--color-text-secondary)] shadow-sm transition active:scale-[0.98] disabled:opacity-60"
+            aria-label="Changer d'utilisateur"
+          >
+            <IconLogout size={15} stroke={2} />
+            <span>{loggingOut ? '...' : 'Changer'}</span>
+          </button>
           <div className="relative">
             <div
               className="flex h-11 w-11 items-center justify-center rounded-full text-[16px] font-bold text-[var(--color-sage)]"

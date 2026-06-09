@@ -20,6 +20,18 @@ test.describe('Auth flow', () => {
     await page.waitForURL(/\/dashboard/);
   });
 
+  test("Logged-in member can return to profile picker", async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: /Chana/i }).click();
+    await typeCode(page, '4729');
+    await page.waitForURL(/\/dashboard/);
+
+    await page.getByRole('button', { name: /Changer d'utilisateur/i }).click();
+
+    await expect(page).toHaveURL('/');
+    await expect(page.getByRole('heading', { name: 'Qui es-tu ?' })).toBeVisible();
+  });
+
   test('Alpha logs in with admin code', async ({ page }) => {
     await page.goto('/');
     await page.getByRole('button', { name: /Je suis le responsable/i }).click();
@@ -28,6 +40,18 @@ test.describe('Auth flow', () => {
     await typeCode(page, '9182');
     await expect(page.getByText('Console admin ouverte')).toBeVisible();
     await page.waitForURL(/\/admin/);
+  });
+
+  test("Logged-in admin can return to profile picker", async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('button', { name: /Je suis le responsable/i }).click();
+    await typeCode(page, '9182');
+    await page.waitForURL(/\/admin/);
+
+    await page.getByRole('button', { name: /Changer d'utilisateur/i }).click();
+
+    await expect(page).toHaveURL('/');
+    await expect(page.getByRole('heading', { name: 'Qui es-tu ?' })).toBeVisible();
   });
 
   test('Wrong code shows error', async ({ page }) => {

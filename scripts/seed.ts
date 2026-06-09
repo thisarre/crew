@@ -4,6 +4,14 @@ import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database } from '../src/types/database';
 import {
+  ADMIN_SEED_TABLES,
+  ASSIGNMENTS_SEED,
+  MONTHLY_VALIDATIONS_SEED,
+  SERVICES_SEED,
+  SLOTS_SEED,
+  SPIRITUAL_CONTENT_SEED,
+} from '../src/data/admin-seed';
+import {
   MEMBER_SKILLS_SEED,
   ORGANIZATION_SEED,
   PROFILES_SEED,
@@ -29,10 +37,30 @@ const resolveEnv = () => {
 type SupabaseServiceClient = SupabaseClient<Database>;
 
 const cleanupTables = async (client: SupabaseServiceClient) => {
+  const assignmentIds = ASSIGNMENTS_SEED.map(assignment => assignment.id!);
+  const slotIds = SLOTS_SEED.map(slot => slot.id!);
+  const serviceIds = SERVICES_SEED.map(service => service.id!);
+  const validationIds = MONTHLY_VALIDATIONS_SEED.map(validation => validation.id!);
+  const spiritualContentIds = SPIRITUAL_CONTENT_SEED.map(content => content.id!);
   const profileIds = PROFILES_SEED.map(profile => profile.id!);
   const skillIds = SKILLS_SEED.map(skill => skill.id!);
   const memberSkillIds = MEMBER_SKILLS_SEED.map(skill => skill.id);
 
+  if (assignmentIds.length) {
+    await client.from('assignments').delete().in('id', assignmentIds);
+  }
+  if (slotIds.length) {
+    await client.from('service_slots').delete().in('id', slotIds);
+  }
+  if (serviceIds.length) {
+    await client.from('services').delete().in('id', serviceIds);
+  }
+  if (validationIds.length) {
+    await client.from('monthly_validations').delete().in('id', validationIds);
+  }
+  if (spiritualContentIds.length) {
+    await client.from('spiritual_content').delete().in('id', spiritualContentIds);
+  }
   await client.from('member_skills').delete().in('id', memberSkillIds);
   if (profileIds.length) {
     await client.from('profiles').delete().in('id', profileIds);
@@ -50,6 +78,11 @@ const upsertOrdered = async (client: SupabaseServiceClient) => {
   await client.from('profiles').upsert(PROFILES_SEED, { onConflict: 'id' });
   await client.from('skills').upsert(SKILLS_SEED, { onConflict: 'id' });
   await client.from('member_skills').upsert(MEMBER_SKILLS_SEED, { onConflict: 'id' });
+  await client.from('services').upsert(ADMIN_SEED_TABLES.services, { onConflict: 'id' });
+  await client.from('service_slots').upsert(ADMIN_SEED_TABLES.service_slots, { onConflict: 'id' });
+  await client.from('assignments').upsert(ADMIN_SEED_TABLES.assignments, { onConflict: 'id' });
+  await client.from('monthly_validations').upsert(ADMIN_SEED_TABLES.monthly_validations, { onConflict: 'id' });
+  await client.from('spiritual_content').upsert(ADMIN_SEED_TABLES.spiritual_content, { onConflict: 'id' });
 };
 
 async function main() {
