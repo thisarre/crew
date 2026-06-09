@@ -28,8 +28,8 @@ export const SERVICES_SEED: Database['public']['Tables']['services']['Insert'][]
     start_time: '14:00:00',
     arrival_time: '13:30:00',
     location: 'Salle principale',
-    status: 'published',
-    published_at: '2026-06-09T12:00:00Z',
+    status: 'draft',
+    published_at: null,
   },
 ];
 
