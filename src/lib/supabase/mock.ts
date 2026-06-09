@@ -152,6 +152,7 @@ const buildInitialCache = (): { [K in TableKey]: TableRows<K>[] } => ({
   spiritual_content: spiritualContentRows,
   push_subscriptions: [],
   bible_verses: [],
+  automation_events: [],
 });
 
 // Le cache est clonable et réinitialisable — utile pour isoler les tests (chaque requête réelle

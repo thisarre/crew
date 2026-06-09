@@ -1,6 +1,7 @@
 import type { SupabaseServerClient } from '@/lib/supabase/server';
 import type { Database } from '@/types/database';
 import { ORG_ID } from '@/data/seed';
+import { detectCancelledNeedingReplacement, detectUnvalidatedMembers } from '@/lib/automation/detect';
 
 type Tables = Database['public']['Tables'];
 
@@ -12,6 +13,7 @@ export type SlotRow = Tables['service_slots']['Row'];
 export type AssignmentRow = Tables['assignments']['Row'];
 export type ValidationRow = Tables['monthly_validations']['Row'];
 export type SpiritualRow = Tables['spiritual_content']['Row'];
+export type AppreciationRow = Tables['appreciations']['Row'];
 
 // ---------- Helpers de récupération brute ----------
 
@@ -96,6 +98,14 @@ export const fetchSpiritualContent = (client: SupabaseServerClient) =>
       .order('published_at', { ascending: false }) as unknown as PromiseLike<QueryResult<SpiritualRow>>,
   );
 
+export const fetchAppreciations = (client: SupabaseServerClient) =>
+  fetchAll<AppreciationRow>(
+    client
+      .from('appreciations')
+      .select('*')
+      .order('created_at', { ascending: false }) as unknown as PromiseLike<QueryResult<AppreciationRow>>,
+  );
+
 // ---------- Aggregats ----------
 
 export type MemberSkillSummary = {
@@ -122,6 +132,7 @@ export type AggregatedAdminData = {
   assignments: AssignmentRow[];
   validations: ValidationRow[];
   spiritual: SpiritualRow[];
+  appreciations: AppreciationRow[];
 };
 
 /**
@@ -147,7 +158,17 @@ export const loadAdminContext = async (
   const year = options.year ?? now.getUTCFullYear();
   const month = options.month ?? now.getUTCMonth() + 1;
 
-  const [profiles, skills, memberSkills, services, slots, assignments, validations, spiritual] = await Promise.all([
+  const [
+    profiles,
+    skills,
+    memberSkills,
+    services,
+    slots,
+    assignments,
+    validations,
+    spiritual,
+    appreciations,
+  ] = await Promise.all([
     fetchProfiles(client),
     fetchSkills(client),
     fetchMemberSkills(client),
@@ -156,9 +177,10 @@ export const loadAdminContext = async (
     fetchAssignments(client),
     fetchValidationsForMonth(client, year, month),
     fetchSpiritualContent(client),
+    fetchAppreciations(client),
   ]);
 
-  return { profiles, skills, memberSkills, services, slots, assignments, validations, spiritual };
+  return { profiles, skills, memberSkills, services, slots, assignments, validations, spiritual, appreciations };
 };
 
 export const buildMembersOverview = (
@@ -291,7 +313,7 @@ export type AdminDashboardData = {
   };
 };
 
-const FRENCH_MONTHS = [
+export const FRENCH_MONTHS = [
   'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
   'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre',
 ];
@@ -380,19 +402,10 @@ export const buildAdminDashboard = (
   // Alertes
   const alerts: AdminAlert[] = [];
 
-  // 1. Annulations futures
-  for (const assignment of ctx.assignments) {
-    if (assignment.status !== 'cancelled') continue;
-    const service = ctx.services.find(s => s.id === assignment.service_id);
-    if (!service) continue;
-    if (new Date(service.service_date).getTime() < now.getTime()) continue;
-    const profile = ctx.profiles.find(p => p.id === assignment.profile_id);
-    if (!profile) continue;
-    const slot = ctx.slots.find(s => s.id === assignment.slot_id);
-    const skill = ctx.skills.find(s => s.id === slot?.skill_id);
-    const candidates = ctx.memberSkills.filter(
-      ms => ms.skill_id === slot?.skill_id && ms.level !== 'learning' && ms.profile_id !== profile.id,
-    ).length;
+  // 1. Annulations futures (détecteur partagé avec le cron de relance)
+  for (const need of detectCancelledNeedingReplacement(ctx, now)) {
+    if (!need.cancelledProfile) continue;
+    const profile = need.cancelledProfile;
     alerts.push({
       kind: 'cancelled',
       severity: 'error',
@@ -400,25 +413,14 @@ export const buildAdminDashboard = (
       profileName: profile.display_name,
       profileInitials: profile.initials,
       profileColor: profile.avatar_color ?? '#96D8D0',
-      serviceDate: service.service_date,
-      slotLabel: skill?.name ?? '',
-      candidates,
+      serviceDate: need.service.service_date,
+      slotLabel: need.skill?.name ?? '',
+      candidates: need.candidates,
     });
   }
 
-  // 2. Mois non validé (membres assignés à un service publié)
-  const publishedServices = ctx.services.filter(s => s.status === 'published' || s.status === 'completed');
-  const publishedAt = publishedServices
-    .map(s => (s.published_at ? new Date(s.published_at).getTime() : 0))
-    .reduce((min, t) => (t > 0 && t < min ? t : min), Infinity);
-  const daysSincePublish = publishedAt !== Infinity ? Math.floor((now.getTime() - publishedAt) / (1000 * 60 * 60 * 24)) : 0;
-  const unvalidatedProfiles = ctx.profiles.filter(p => {
-    if (p.role !== 'member' || !(p.is_active ?? true)) return false;
-    const hasAssignment = ctx.assignments.some(a => a.profile_id === p.id && publishedServices.some(s => s.id === a.service_id));
-    const validated = ctx.validations.some(v => v.profile_id === p.id);
-    return hasAssignment && !validated;
-  });
-  for (const profile of unvalidatedProfiles) {
+  // 2. Mois non validé (membres assignés à un service publié — détecteur partagé)
+  for (const { profile, daysSincePublish } of detectUnvalidatedMembers(ctx, now)) {
     alerts.push({
       kind: 'unvalidated_month',
       severity: 'warning',

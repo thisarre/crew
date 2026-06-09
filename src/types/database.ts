@@ -583,6 +583,40 @@ export type Database = {
         };
         Relationships: [];
       };
+      automation_events: {
+        Row: {
+          id: string;
+          kind: string;
+          subject_profile_id: string | null;
+          ref_id: string;
+          sent_at: string;
+          meta: Json;
+        };
+        Insert: {
+          id?: string;
+          kind: string;
+          subject_profile_id?: string | null;
+          ref_id: string;
+          sent_at?: string;
+          meta?: Json;
+        };
+        Update: {
+          id?: string;
+          kind?: string;
+          subject_profile_id?: string | null;
+          ref_id?: string;
+          sent_at?: string;
+          meta?: Json;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'automation_events_subject_profile_id_fkey';
+            columns: ['subject_profile_id'];
+            referencedRelation: 'profiles';
+            referencedColumns: ['id'];
+          }
+        ];
+      };
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
