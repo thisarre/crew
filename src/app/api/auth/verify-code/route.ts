@@ -5,45 +5,61 @@ import { SESSION_COOKIE_NAME, SESSION_COOKIE_OPTIONS, encodeSessionToken } from 
 import { createClient } from '@/lib/supabase/server';
 import { fetchProfileById } from '@/lib/queries/admin';
 
+export const runtime = 'nodejs';
+
 export async function POST(request: Request) {
-  const { code, profile_id: profileId, is_admin: isAdmin } = await request.json();
+  try {
+    const { code, profile_id: profileId, is_admin: isAdmin } = await request.json();
 
-  if (!code || !profileId) {
-    return NextResponse.json({ ok: false, error: 'missing_params' }, { status: 400 });
-  }
+    if (!code || !profileId) {
+      return NextResponse.json({ ok: false, error: 'missing_params' }, { status: 400 });
+    }
 
-  const profile = await fetchProfileById(createClient(), profileId);
-  if (!profile) {
-    return NextResponse.json({ ok: false, error: 'profile_not_found' }, { status: 404 });
-  }
-  if (!(profile.is_active ?? true)) {
-    return NextResponse.json({ ok: false, error: 'profile_inactive' }, { status: 403 });
-  }
+    const profile = await fetchProfileById(createClient(), profileId);
+    if (!profile) {
+      return NextResponse.json({ ok: false, error: 'profile_not_found' }, { status: 404 });
+    }
+    if (!(profile.is_active ?? true)) {
+      return NextResponse.json({ ok: false, error: 'profile_inactive' }, { status: 403 });
+    }
 
-  const respondWithSession = (redirect: string, asAdmin: boolean) => {
-    const token = encodeSessionToken({ profileId, isAdmin: asAdmin });
-    const res = NextResponse.json({ ok: true, redirect });
-    res.cookies.set({
-      name: SESSION_COOKIE_NAME,
-      value: token,
-      ...SESSION_COOKIE_OPTIONS,
-    });
-    return res;
-  };
+    const respondWithSession = (redirect: string, asAdmin: boolean) => {
+      const token = encodeSessionToken({ profileId, isAdmin: asAdmin });
+      const res = NextResponse.json({ ok: true, redirect });
+      res.cookies.set({
+        name: SESSION_COOKIE_NAME,
+        value: token,
+        ...SESSION_COOKIE_OPTIONS,
+      });
+      return res;
+    };
 
-  if (isAdmin) {
-    if (!verifyAdminCode(code)) {
+    if (isAdmin) {
+      if (!verifyAdminCode(code)) {
+        return NextResponse.json({ ok: false, error: 'invalid_code' }, { status: 401 });
+      }
+      if (profile.role !== 'admin') {
+        return NextResponse.json({ ok: false, error: 'not_admin' }, { status: 401 });
+      }
+      return respondWithSession('/admin', true);
+    }
+
+    if (!verifyTeamCode(code)) {
       return NextResponse.json({ ok: false, error: 'invalid_code' }, { status: 401 });
     }
-    if (profile.role !== 'admin') {
-      return NextResponse.json({ ok: false, error: 'not_admin' }, { status: 401 });
-    }
-    return respondWithSession('/admin', true);
-  }
 
-  if (!verifyTeamCode(code)) {
-    return NextResponse.json({ ok: false, error: 'invalid_code' }, { status: 401 });
-  }
+    return respondWithSession('/dashboard', false);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'unknown_error';
+    const isConfigError = message.includes('SUPABASE') || message.includes('manquant');
 
-  return respondWithSession('/dashboard', false);
+    return NextResponse.json(
+      {
+        ok: false,
+        error: isConfigError ? 'server_config_error' : 'auth_server_error',
+        detail: process.env.NODE_ENV === 'production' ? undefined : message,
+      },
+      { status: isConfigError ? 503 : 500 },
+    );
+  }
 }
