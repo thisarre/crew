@@ -97,15 +97,27 @@ test.describe("Hydratation React", () => {
       await navigator.serviceWorker.ready;
     });
 
-    // La page suivante est contrôlée par le service worker : l'app doit le désenregistrer.
+    // La page suivante est contrôlée par le service worker : l'app doit le désenregistrer, vider
+    // ses caches et recharger une fois. Les évaluations peuvent tomber pendant ce rechargement
+    // automatique (contexte détruit) : on renvoie alors une valeur provisoire et on réessaie.
     await page.reload();
     await expect
-      .poll(() => page.evaluate(async () => (await navigator.serviceWorker.getRegistrations()).length), {
-        timeout: 10_000,
-      })
+      .poll(
+        () =>
+          page
+            .evaluate(async () => (await navigator.serviceWorker.getRegistrations()).length)
+            .catch(() => -1),
+        { timeout: 10_000 },
+      )
       .toBe(0);
     await expect
-      .poll(() => page.evaluate(async () => (await caches.keys()).filter(key => key.startsWith('crew-'))))
+      .poll(
+        () =>
+          page
+            .evaluate(async () => (await caches.keys()).filter(key => key.startsWith('crew-')))
+            .catch(() => ['contexte détruit, nouvel essai']),
+        { timeout: 10_000 },
+      )
       .toEqual([]);
 
     await page.reload();
