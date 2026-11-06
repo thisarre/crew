@@ -1,13 +1,14 @@
 /* Crew — service worker
  *
  * Stratégies :
- *  - Assets statiques (/_next/static, fonts, images) → cache-first
- *  - Pages HTML → network-first avec fallback offline
+ *  - Assets immuables (/_next/static hachés, fonts, images) → cache-first
+ *  - Scripts et styles non hachés (dev) → network-first, cache seulement hors ligne
+ *  - Pages HTML → network-only avec fallback offline
  *  - API → network only (pas de cache)
  *  - Push notifications → affiche une notif avec deep-link
  */
 
-const VERSION = 'crew-v3';
+const VERSION = 'crew-v4';
 const STATIC_CACHE = `${VERSION}-static`;
 const PAGES_CACHE = `${VERSION}-pages`;
 const OFFLINE_URL = '/offline.html';
@@ -36,14 +37,39 @@ self.addEventListener('activate', event => {
   );
 });
 
-const isStaticAsset = request =>
+// Un asset Next n'est servi en cache-first que si son nom de fichier contient un hash de contenu
+// (build de production : app/layout-0a1b2c3d4e5f6789.js, css/a1b2c3d4.css, media/…-s.p.woff2).
+// En développement, Next sert /_next/static/chunks/app/layout.js SANS hash (et webpack.js?v=…) :
+// les servir depuis le cache ferait tourner d'anciens chunks face à un HTML serveur à jour,
+// d'où des erreurs d'hydratation sur toutes les pages. Ces assets passent en network-first.
+const HASHED_FILENAME = /[a-f0-9]{8,}/i;
+
+const isHashedNextAsset = url => {
+  if (!url.pathname.startsWith('/_next/static/')) return false;
+  if (url.search) return false;
+  const filename = url.pathname.slice(url.pathname.lastIndexOf('/') + 1);
+  return HASHED_FILENAME.test(filename);
+};
+
+const isStaticAsset = (request, url) =>
+  isHashedNextAsset(url) ||
+  request.destination === 'font' ||
+  request.destination === 'image';
+
+const isNetworkFirstAsset = (request, url) =>
   request.destination === 'style' ||
   request.destination === 'script' ||
-  request.destination === 'font' ||
-  request.destination === 'image' ||
-  request.url.includes('/_next/static/');
+  url.pathname.startsWith('/_next/static/');
 
 const isApiCall = url => url.pathname.startsWith('/api/');
+
+const putInCache = (request, response) => {
+  if (response && response.ok) {
+    const clone = response.clone();
+    caches.open(STATIC_CACHE).then(cache => cache.put(request, clone));
+  }
+  return response;
+};
 
 self.addEventListener('fetch', event => {
   const { request } = event;
@@ -56,19 +82,23 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Assets statiques : cache-first
-  if (isStaticAsset(request)) {
+  // Assets immuables (hash de contenu, polices, images) : cache-first
+  if (isStaticAsset(request, url)) {
     event.respondWith(
       caches.match(request).then(cached => {
         if (cached) return cached;
-        return fetch(request).then(response => {
-          if (response.ok) {
-            const clone = response.clone();
-            caches.open(STATIC_CACHE).then(cache => cache.put(request, clone));
-          }
-          return response;
-        });
+        return fetch(request).then(response => putInCache(request, response));
       }),
+    );
+    return;
+  }
+
+  // Scripts et styles non hachés (dev) : network-first, le cache ne sert qu'hors ligne
+  if (isNetworkFirstAsset(request, url)) {
+    event.respondWith(
+      fetch(request)
+        .then(response => putInCache(request, response))
+        .catch(() => caches.match(request)),
     );
     return;
   }
